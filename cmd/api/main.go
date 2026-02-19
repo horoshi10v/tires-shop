@@ -11,6 +11,7 @@ import (
 	"github.com/horoshi10v/tires-shop/internal/repository/models"
 	"github.com/horoshi10v/tires-shop/internal/repository/pg"
 	"github.com/horoshi10v/tires-shop/internal/service"
+	"github.com/horoshi10v/tires-shop/internal/transport/http/middleware"
 	v1 "github.com/horoshi10v/tires-shop/internal/transport/http/v1"
 	"github.com/horoshi10v/tires-shop/pkg/database"
 )
@@ -37,11 +38,11 @@ func main() {
 
 	log.Info("running migrations...")
 	if err := db.AutoMigrate(
-        &models.Warehouse{},
-        &models.Lot{},
-        &models.Order{},
-        &models.OrderItem{},
-    ); err != nil {
+		&models.Warehouse{},
+		&models.Lot{},
+		&models.Order{},
+		&models.OrderItem{},
+	); err != nil {
 		log.Error("migration failed", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
@@ -65,22 +66,40 @@ func main() {
 	// ---------------------------------------------------------
 
 	// DI Container
-    lotRepo := pg.NewLotRepository(db)
-    lotService := service.NewLotService(lotRepo, log)
-    lotHandler := v1.NewLotHandler(lotService)
+	lotRepo := pg.NewLotRepository(db)
+	lotService := service.NewLotService(lotRepo, log)
+	lotHandler := v1.NewLotHandler(lotService)
 
-    orderRepo := pg.NewOrderRepository(db)
-    orderService := service.NewOrderService(orderRepo, log)
-    orderHandler := v1.NewOrderHandler(orderService)
+	orderRepo := pg.NewOrderRepository(db)
+	orderService := service.NewOrderService(orderRepo, log)
+	orderHandler := v1.NewOrderHandler(orderService)
+
+	reportRepo := pg.NewReportRepository(db)
+	reportService := service.NewReportService(reportRepo, log)
+	reportHandler := v1.NewReportHandler(reportService)
 
 	// Router Setup
 	router := gin.Default()
 
-	apiV1 := router.Group("/api/v1")
+	publicAPI := router.Group("/api/v1")
 	{
-		apiV1.POST("/lots", lotHandler.Create)
-		apiV1.GET("/lots", lotHandler.List)
-		apiV1.POST("/orders", orderHandler.Create)
+		publicAPI.GET("/lots", lotHandler.List)
+		publicAPI.POST("/orders", orderHandler.Create)
+	}
+
+	// Staff Routes
+	staffAPI := router.Group("/api/v1")
+	staffAPI.Use(middleware.RequireRole("ADMIN", "STAFF"))
+	{
+		staffAPI.POST("/lots", lotHandler.Create)
+		staffAPI.PATCH("/orders/:id/status", orderHandler.UpdateStatus)
+	}
+
+	// Admin Routes
+	adminAPI := router.Group("/api/v1")
+	adminAPI.Use(middleware.RequireRole("ADMIN"))
+	{
+		adminAPI.GET("/reports/pnl", reportHandler.GetPnL)
 	}
 
 	router.GET("/health", func(c *gin.Context) {

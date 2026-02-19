@@ -19,12 +19,19 @@ type CreateOrderDTO struct {
 	Items         []OrderItemDTO `json:"items" binding:"required,min=1"`
 }
 
+// UpdateOrderStatusDTO represents the request to change an order's status.
+type UpdateOrderStatusDTO struct {
+	Status string `json:"status" binding:"required,oneof=NEW PREPAYMENT DONE CANCELLED"`
+}
+
 // OrderRepository handles database operations for orders, including transactions.
 type OrderRepository interface {
 	CreateOrderTx(ctx context.Context, dto CreateOrderDTO) (uuid.UUID, error)
+	UpdateStatus(ctx context.Context, id uuid.UUID, status string) error
 }
 
 // OrderService handles business logic for orders.
 type OrderService interface {
 	CreateOrder(ctx context.Context, dto CreateOrderDTO) (uuid.UUID, error)
+	UpdateOrderStatus(ctx context.Context, id uuid.UUID, status string) error
 }

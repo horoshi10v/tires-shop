@@ -94,3 +94,15 @@ func (r *OrderRepo) CreateOrderTx(ctx context.Context, dto domain.CreateOrderDTO
 
 	return orderID, nil
 }
+
+// UpdateStatus changes the status of an existing order.
+func (r *OrderRepo) UpdateStatus(ctx context.Context, id uuid.UUID, status string) error {
+	result := r.db.WithContext(ctx).Model(&models.Order{}).Where("id = ?", id).Update("status", status)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("order not found")
+	}
+	return nil
+}

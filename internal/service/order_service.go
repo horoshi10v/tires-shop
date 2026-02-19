@@ -37,3 +37,8 @@ func (s *orderService) CreateOrder(ctx context.Context, dto domain.CreateOrderDT
 
 	return orderID, nil
 }
+
+func (s *orderService) UpdateOrderStatus(ctx context.Context, id uuid.UUID, status string) error {
+	s.logger.Info("updating order status", slog.String("order_id", id.String()), slog.String("new_status", status))
+	return s.repo.UpdateStatus(ctx, id, status)
+}

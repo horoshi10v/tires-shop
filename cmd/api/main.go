@@ -99,14 +99,15 @@ func main() {
 
 	publicAPI := router.Group("/api/v1")
 	{
-		publicAPI.GET("/lots", lotHandler.List)
+		publicAPI.GET("/lots", lotHandler.ListPublic)
 		publicAPI.POST("/orders", orderHandler.Create)
 	}
 
 	// Staff Routes
-	staffAPI := router.Group("/api/v1")
+	staffAPI := router.Group("/api/v1/staff")
 	staffAPI.Use(middleware.RequireRole("ADMIN", "STAFF"))
 	{
+		staffAPI.GET("/lots", lotHandler.ListInternal)
 		staffAPI.POST("/lots", lotHandler.Create)
 		staffAPI.PATCH("/orders/:id/status", orderHandler.UpdateStatus)
 	}

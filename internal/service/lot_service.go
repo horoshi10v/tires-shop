@@ -40,9 +40,20 @@ func (s *lotService) CreateLot(ctx context.Context, dto domain.CreateLotDTO) (uu
 	return id, nil
 }
 
-// ListLots processes the filtering parameters and fetches the lots.
-func (s *lotService) ListLots(ctx context.Context, filter domain.LotFilter) ([]domain.LotResponse, int64, error) {
-	// Set default pagination values if they are missing or invalid
+func (s *lotService) ListPublicLots(ctx context.Context, filter domain.LotFilter) ([]domain.LotPublicResponse, int64, error) {
+	filter = sanitizePagination(filter)
+	s.logger.Debug("fetching public lots", slog.Int("page", filter.Page))
+	return s.repo.ListPublic(ctx, filter)
+}
+
+func (s *lotService) ListInternalLots(ctx context.Context, filter domain.LotFilter) ([]domain.LotInternalResponse, int64, error) {
+	filter = sanitizePagination(filter)
+	s.logger.Debug("fetching internal lots", slog.Int("page", filter.Page))
+	return s.repo.ListInternal(ctx, filter)
+}
+
+// Helper function to ensure pagination is valid
+func sanitizePagination(filter domain.LotFilter) domain.LotFilter {
 	if filter.Page <= 0 {
 		filter.Page = 1
 	}
@@ -50,13 +61,7 @@ func (s *lotService) ListLots(ctx context.Context, filter domain.LotFilter) ([]d
 		filter.PageSize = 10
 	}
 	if filter.PageSize > 100 {
-		filter.PageSize = 100 // Prevent fetching too many records at once
+		filter.PageSize = 100
 	}
-
-	s.logger.Debug("fetching lots",
-		slog.Int("page", filter.Page),
-		slog.Int("page_size", filter.PageSize),
-	)
-
-	return s.repo.List(ctx, filter)
+	return filter
 }

@@ -32,7 +32,7 @@ func NewOrderHandler(service domain.OrderService) *OrderHandler {
 //	@Failure      401    {object}  map[string]string "Unauthorized"
 //	@Failure      403    {object}  map[string]string "Forbidden"
 //	@Failure      500    {object}  map[string]string "Internal Server Error"
-//	@Router       /orders [post]
+//	@Router       /staff/orders [post]
 func (h *OrderHandler) Create(c *gin.Context) {
 	var req domain.CreateOrderDTO
 
@@ -73,7 +73,7 @@ func (h *OrderHandler) Create(c *gin.Context) {
 //	@Failure      401    {object}  map[string]string "Unauthorized"
 //	@Failure      403    {object}  map[string]string "Forbidden"
 //	@Failure      500    {object}  map[string]string "Internal Server Error"
-//	@Router       /orders/{id}/status [put]
+//	@Router       /staff/orders/{id}/status [put]
 func (h *OrderHandler) UpdateStatus(c *gin.Context) {
 	orderIDParam := c.Param("id")
 	orderID, err := uuid.Parse(orderIDParam)

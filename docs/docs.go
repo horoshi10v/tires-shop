@@ -19,17 +19,14 @@ const docTemplate = `{
     "paths": {
         "/lots": {
             "get": {
-                "description": "Get a paginated list of lots with optional filtering by brand or type.",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Get active lots. Purchase price and archive data are hidden.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "lots"
+                    "lots-public"
                 ],
-                "summary": "List all active lots",
+                "summary": "List available lots (Public)",
                 "parameters": [
                     {
                         "type": "integer",
@@ -47,13 +44,109 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Filter by brand name (ILIKE)",
+                        "description": "Filter by brand name",
+                        "name": "brand",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.LotPublicResponse"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/reports/pnl": {
+            "get": {
+                "security": [
+                    {
+                        "RoleAuth": []
+                    }
+                ],
+                "description": "Calculates total revenue, COGS, and profit based on DONE orders.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reports"
+                ],
+                "summary": "Get Profit \u0026 Loss Report",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.PnLReport"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/staff/lots": {
+            "get": {
+                "security": [
+                    {
+                        "RoleAuth": []
+                    }
+                ],
+                "description": "Get lots including sensitive financial data and archives.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "lots-staff"
+                ],
+                "summary": "List all lots (Internal)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Items per page",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by brand name",
                         "name": "brand",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Filter by status (e.g. ACTIVE, ARCHIVED)",
+                        "description": "Filter by status",
                         "name": "status",
                         "in": "query"
                     }
@@ -64,16 +157,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.LotResponse"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
+                                "$ref": "#/definitions/domain.LotInternalResponse"
                             }
                         }
                     }
@@ -85,7 +169,7 @@ const docTemplate = `{
                         "RoleAuth": []
                     }
                 ],
-                "description": "Add a new lot to the inventory with details like brand, type, and quantity.",
+                "description": "Add a new lot to the inventory.",
                 "consumes": [
                     "application/json"
                 ],
@@ -93,7 +177,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "lots"
+                    "lots-staff"
                 ],
                 "summary": "Create a new lot",
                 "parameters": [
@@ -114,47 +198,11 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
                     }
                 }
             }
         },
-        "/orders": {
+        "/staff/orders": {
             "post": {
                 "security": [
                     {
@@ -230,7 +278,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/orders/{id}/status": {
+        "/staff/orders/{id}/status": {
             "put": {
                 "security": [
                     {
@@ -314,52 +362,6 @@ const docTemplate = `{
                     }
                 }
             }
-        },
-        "/reports/pnl": {
-            "get": {
-                "security": [
-                    {
-                        "RoleAuth": []
-                    }
-                ],
-                "description": "Calculates total revenue, COGS, and profit based on DONE orders.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "reports"
-                ],
-                "summary": "Get Profit \u0026 Loss Report",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/domain.PnLReport"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
         }
     },
     "definitions": {
@@ -385,6 +387,10 @@ const docTemplate = `{
                         "USED"
                     ]
                 },
+                "defects": {
+                    "description": "Description of damages, if any",
+                    "type": "string"
+                },
                 "initial_quantity": {
                     "type": "integer"
                 },
@@ -392,10 +398,17 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "params": {
-                    "type": "object",
-                    "additionalProperties": true
+                    "$ref": "#/definitions/domain.LotParams"
+                },
+                "photos": {
+                    "description": "URLs to images",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "purchase_price": {
+                    "description": "Hidden from buyer",
                     "type": "number"
                 },
                 "sell_price": {
@@ -436,7 +449,7 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.LotResponse": {
+        "domain.LotInternalResponse": {
             "type": "object",
             "properties": {
                 "brand": {
@@ -448,15 +461,29 @@ const docTemplate = `{
                 "current_quantity": {
                     "type": "integer"
                 },
+                "defects": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
+                },
+                "initial_quantity": {
+                    "type": "integer"
                 },
                 "model": {
                     "type": "string"
                 },
                 "params": {
-                    "type": "object",
-                    "additionalProperties": true
+                    "$ref": "#/definitions/domain.LotParams"
+                },
+                "photos": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "purchase_price": {
+                    "type": "number"
                 },
                 "sell_price": {
                     "type": "number"
@@ -468,6 +495,71 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "warehouse_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.LotParams": {
+            "type": "object",
+            "properties": {
+                "anti_puncture": {
+                    "type": "boolean"
+                },
+                "diameter": {
+                    "type": "integer"
+                },
+                "is_run_flat": {
+                    "type": "boolean"
+                },
+                "is_spiked": {
+                    "type": "boolean"
+                },
+                "profile": {
+                    "type": "integer"
+                },
+                "season": {
+                    "description": "SUMMER, WINTER, ALL_SEASON",
+                    "type": "string"
+                },
+                "width": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.LotPublicResponse": {
+            "type": "object",
+            "properties": {
+                "brand": {
+                    "type": "string"
+                },
+                "condition": {
+                    "type": "string"
+                },
+                "current_quantity": {
+                    "type": "integer"
+                },
+                "defects": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "params": {
+                    "$ref": "#/definitions/domain.LotParams"
+                },
+                "photos": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "sell_price": {
+                    "type": "number"
+                },
+                "type": {
                     "type": "string"
                 }
             }

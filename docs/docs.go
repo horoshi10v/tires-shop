@@ -17,6 +17,58 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/auth/telegram": {
+            "post": {
+                "description": "Validates Telegram initData and returns a JWT token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Login via Telegram Mini App",
+                "parameters": [
+                    {
+                        "description": "Telegram initData",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.AuthRequestDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.AuthResponseDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/lots": {
             "get": {
                 "description": "Get active lots. Purchase price and archive data are hidden.",
@@ -365,6 +417,29 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "domain.AuthRequestDTO": {
+            "type": "object",
+            "required": [
+                "init_data"
+            ],
+            "properties": {
+                "init_data": {
+                    "description": "The raw string from window.Telegram.WebApp.initData",
+                    "type": "string"
+                }
+            }
+        },
+        "domain.AuthResponseDTO": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/domain.User"
+                }
+            }
+        },
         "domain.CreateLotDTO": {
             "type": "object",
             "required": [
@@ -615,6 +690,39 @@ const docTemplate = `{
                     ]
                 }
             }
+        },
+        "domain.User": {
+            "type": "object",
+            "properties": {
+                "first_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "role": {
+                    "$ref": "#/definitions/domain.UserRole"
+                },
+                "telegram_id": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.UserRole": {
+            "type": "string",
+            "enum": [
+                "ADMIN",
+                "STAFF",
+                "BUYER"
+            ],
+            "x-enum-varnames": [
+                "RoleAdmin",
+                "RoleStaff",
+                "RoleBuyer"
+            ]
         }
     },
     "securityDefinitions": {

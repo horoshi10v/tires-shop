@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
@@ -11,6 +12,7 @@ type Config struct {
 	Env        string `yaml:"env" env:"ENV" env-default:"local"`
 	HTTPServer `yaml:"http_server"`
 	DB         `yaml:"db"`
+	Auth       `yaml:"auth"`
 }
 
 type HTTPServer struct {
@@ -24,6 +26,12 @@ type DB struct {
 	Password string `yaml:"password" env:"POSTGRES_PASSWORD"`
 	Name     string `yaml:"name" env:"POSTGRES_DB" env-default:"tires_shop"`
 	SSLMode  string `yaml:"ssl_mode" env:"POSTGRES_SSLMODE" env-default:"disable"`
+}
+
+type Auth struct {
+	JWTSecret        string        `env:"JWT_SECRET" env-required:"true"`
+	TelegramBotToken string        `env:"TELEGRAM_BOT_TOKEN" env-required:"true"`
+	TokenTTL         time.Duration `env:"JWT_TTL" env-default:"72h"`
 }
 
 func MustLoad() *Config {

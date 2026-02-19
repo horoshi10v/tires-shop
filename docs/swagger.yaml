@@ -1,5 +1,20 @@
 basePath: /api/v1
 definitions:
+  domain.AuthRequestDTO:
+    properties:
+      init_data:
+        description: The raw string from window.Telegram.WebApp.initData
+        type: string
+    required:
+    - init_data
+    type: object
+  domain.AuthResponseDTO:
+    properties:
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/domain.User'
+    type: object
   domain.CreateLotDTO:
     properties:
       brand:
@@ -172,6 +187,29 @@ definitions:
     required:
     - status
     type: object
+  domain.User:
+    properties:
+      first_name:
+        type: string
+      id:
+        type: string
+      role:
+        $ref: '#/definitions/domain.UserRole'
+      telegram_id:
+        type: integer
+      username:
+        type: string
+    type: object
+  domain.UserRole:
+    enum:
+    - ADMIN
+    - STAFF
+    - BUYER
+    type: string
+    x-enum-varnames:
+    - RoleAdmin
+    - RoleStaff
+    - RoleBuyer
 host: localhost:8080
 info:
   contact:
@@ -180,6 +218,40 @@ info:
   title: Tires Shop CRM API
   version: "1.0"
 paths:
+  /auth/telegram:
+    post:
+      consumes:
+      - application/json
+      description: Validates Telegram initData and returns a JWT token.
+      parameters:
+      - description: Telegram initData
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/domain.AuthRequestDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.AuthResponseDTO'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login via Telegram Mini App
+      tags:
+      - auth
   /lots:
     get:
       description: Get active lots. Purchase price and archive data are hidden.

@@ -59,6 +59,7 @@ func main() {
 		&models.Order{},
 		&models.OrderItem{},
 		&models.AuditLog{},
+		&models.User{},
 	); err != nil {
 		log.Error("migration failed", slog.String("error", err.Error()))
 		os.Exit(1)
@@ -87,6 +88,10 @@ func main() {
 	tgNotifier.Start(context.Background())
 
 	// DI Container
+	userRepo := pg.NewUserRepository(db)
+	authService := service.NewAuthService(userRepo, cfg, log)
+	authHandler := v1.NewAuthHandler(authService)
+
 	lotRepo := pg.NewLotRepository(db)
 	lotService := service.NewLotService(lotRepo, log)
 	lotHandler := v1.NewLotHandler(lotService)
@@ -108,11 +113,12 @@ func main() {
 	{
 		publicAPI.GET("/lots", lotHandler.ListPublic)
 		publicAPI.POST("/orders", orderHandler.Create)
+		publicAPI.POST("/auth/telegram", authHandler.LoginTelegram)
 	}
 
 	// Staff Routes
 	staffAPI := router.Group("/api/v1/staff")
-	staffAPI.Use(middleware.RequireRole("ADMIN", "STAFF"))
+	staffAPI.Use(middleware.RequireRole(cfg.Auth.JWTSecret, "ADMIN", "STAFF"))
 	{
 		staffAPI.GET("/lots", lotHandler.ListInternal)
 		staffAPI.POST("/lots", lotHandler.Create)
@@ -121,7 +127,7 @@ func main() {
 
 	// Admin Routes
 	adminAPI := router.Group("/api/v1")
-	adminAPI.Use(middleware.RequireRole("ADMIN"))
+	adminAPI.Use(middleware.RequireRole(cfg.Auth.JWTSecret, "ADMIN"))
 	{
 		adminAPI.GET("/reports/pnl", reportHandler.GetPnL)
 	}

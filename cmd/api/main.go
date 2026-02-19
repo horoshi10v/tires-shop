@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/horoshi10v/tires-shop/internal/infrastructure/telegram"
 
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -56,6 +58,7 @@ func main() {
 		&models.Lot{},
 		&models.Order{},
 		&models.OrderItem{},
+		&models.AuditLog{},
 	); err != nil {
 		log.Error("migration failed", slog.String("error", err.Error()))
 		os.Exit(1)
@@ -79,13 +82,17 @@ func main() {
 	}
 	// ---------------------------------------------------------
 
+	// --- 1. Init Infrastructure Services ---
+	tgNotifier := telegram.NewNotifier(log)
+	tgNotifier.Start(context.Background())
+
 	// DI Container
 	lotRepo := pg.NewLotRepository(db)
 	lotService := service.NewLotService(lotRepo, log)
 	lotHandler := v1.NewLotHandler(lotService)
 
 	orderRepo := pg.NewOrderRepository(db)
-	orderService := service.NewOrderService(orderRepo, log)
+	orderService := service.NewOrderService(orderRepo, log, tgNotifier)
 	orderHandler := v1.NewOrderHandler(orderService)
 
 	reportRepo := pg.NewReportRepository(db)

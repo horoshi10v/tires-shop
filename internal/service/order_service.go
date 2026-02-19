@@ -2,26 +2,28 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/google/uuid"
-
 	"github.com/horoshi10v/tires-shop/internal/domain"
+	"github.com/horoshi10v/tires-shop/internal/infrastructure/telegram"
 )
 
 type orderService struct {
-	repo   domain.OrderRepository
-	logger *slog.Logger
+	repo     domain.OrderRepository
+	logger   *slog.Logger
+	notifier telegram.Notifier
 }
 
-func NewOrderService(repo domain.OrderRepository, logger *slog.Logger) domain.OrderService {
+func NewOrderService(repo domain.OrderRepository, logger *slog.Logger, notifier telegram.Notifier) domain.OrderService {
 	return &orderService{
-		repo:   repo,
-		logger: logger,
+		repo:     repo,
+		logger:   logger,
+		notifier: notifier,
 	}
 }
 
-// CreateOrder handles business logic and delegates transaction to repository.
 func (s *orderService) CreateOrder(ctx context.Context, dto domain.CreateOrderDTO) (uuid.UUID, error) {
 	s.logger.Info("processing new order", slog.String("customer", dto.CustomerName))
 
@@ -33,12 +35,22 @@ func (s *orderService) CreateOrder(ctx context.Context, dto domain.CreateOrderDT
 
 	s.logger.Info("order successfully created", slog.String("order_id", orderID.String()))
 
-	// TODO: Later emit an event to RabbitMQ/NATS here to send a Telegram notification.
+	// Send a Telegram notification about the new order. This is done asynchronously to avoid blocking the main flow.
+	msg := fmt.Sprintf("📦 Нове замовлення від %s!\nID: %s", dto.CustomerName, orderID.String())
+	s.notifier.SendAlert(msg)
 
 	return orderID, nil
 }
 
 func (s *orderService) UpdateOrderStatus(ctx context.Context, id uuid.UUID, status string) error {
 	s.logger.Info("updating order status", slog.String("order_id", id.String()), slog.String("new_status", status))
-	return s.repo.UpdateStatus(ctx, id, status)
+
+	if err := s.repo.UpdateStatus(ctx, id, status); err != nil {
+		return err
+	}
+
+	msg := fmt.Sprintf("🔄 Статус замовлення %s змінен на: %s", id.String(), status)
+	s.notifier.SendAlert(msg)
+
+	return nil
 }

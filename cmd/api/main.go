@@ -7,6 +7,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+
+	_ "github.com/horoshi10v/tires-shop/docs"
+
 	"github.com/horoshi10v/tires-shop/internal/config"
 	"github.com/horoshi10v/tires-shop/internal/repository/models"
 	"github.com/horoshi10v/tires-shop/internal/repository/pg"
@@ -16,6 +21,15 @@ import (
 	"github.com/horoshi10v/tires-shop/pkg/database"
 )
 
+// @title           Tires Shop CRM API
+// @version         1.0
+// @description     This is a REST API for managing a tires and rims store/warehouse.
+// @contact.name    Valentyn Khoroshylov
+// @host            localhost:8080
+// @BasePath        /api/v1
+// @securityDefinitions.apikey RoleAuth
+// @in              header
+// @name            X-User-Role
 func main() {
 	cfg := config.MustLoad()
 
@@ -80,6 +94,8 @@ func main() {
 
 	// Router Setup
 	router := gin.Default()
+
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	publicAPI := router.Group("/api/v1")
 	{

@@ -19,6 +19,20 @@ func NewOrderHandler(service domain.OrderService) *OrderHandler {
 }
 
 // Create handles the HTTP request to create an order.
+//
+//	@Summary      Create a new order
+//	@Description  Place a new order with customer details and tire items.
+//	@Tags         orders
+//	@Accept       json
+//	@Produce      json
+//	@Security     RoleAuth
+//	@Param        order  body      domain.CreateOrderDTO  true  "Order details"
+//	@Success      201    {object}  map[string]interface{} "Created"
+//	@Failure      400    {object}  map[string]string "Bad Request"
+//	@Failure      401    {object}  map[string]string "Unauthorized"
+//	@Failure      403    {object}  map[string]string "Forbidden"
+//	@Failure      500    {object}  map[string]string "Internal Server Error"
+//	@Router       /orders [post]
 func (h *OrderHandler) Create(c *gin.Context) {
 	var req domain.CreateOrderDTO
 
@@ -45,6 +59,21 @@ func (h *OrderHandler) Create(c *gin.Context) {
 }
 
 // UpdateStatus handles the HTTP request to change an order's status.
+//
+//	@Summary      Update order status
+//	@Description  Change the status of an existing order (e.g., NEW, PREPAYMENT, DONE, CANCELLED).
+//	@Tags         orders
+//	@Accept       json
+//	@Produce      json
+//	@Security     RoleAuth
+//	@Param        id     path      string                 true  "Order ID"
+//	@Param        status body      domain.UpdateOrderStatusDTO true "New status"
+//	@Success      200    {object}  map[string]string "OK"
+//	@Failure      400    {object}  map[string]string "Bad Request"
+//	@Failure      401    {object}  map[string]string "Unauthorized"
+//	@Failure      403    {object}  map[string]string "Forbidden"
+//	@Failure      500    {object}  map[string]string "Internal Server Error"
+//	@Router       /orders/{id}/status [put]
 func (h *OrderHandler) UpdateStatus(c *gin.Context) {
 	orderIDParam := c.Param("id")
 	orderID, err := uuid.Parse(orderIDParam)

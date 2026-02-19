@@ -36,7 +36,12 @@ func main() {
 	log.Info("connected to postgres")
 
 	log.Info("running migrations...")
-	if err := db.AutoMigrate(&models.Warehouse{}, &models.Lot{}); err != nil {
+	if err := db.AutoMigrate(
+        &models.Warehouse{},
+        &models.Lot{},
+        &models.Order{},
+        &models.OrderItem{},
+    ); err != nil {
 		log.Error("migration failed", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
@@ -59,10 +64,14 @@ func main() {
 	}
 	// ---------------------------------------------------------
 
-	// DI Container (Dependency Injection Setup)
-	lotRepo := pg.NewLotRepository(db)
-	lotService := service.NewLotService(lotRepo, log)
-	lotHandler := v1.NewLotHandler(lotService)
+	// DI Container
+    lotRepo := pg.NewLotRepository(db)
+    lotService := service.NewLotService(lotRepo, log)
+    lotHandler := v1.NewLotHandler(lotService)
+
+    orderRepo := pg.NewOrderRepository(db)
+    orderService := service.NewOrderService(orderRepo, log)
+    orderHandler := v1.NewOrderHandler(orderService)
 
 	// Router Setup
 	router := gin.Default()
@@ -71,6 +80,7 @@ func main() {
 	{
 		apiV1.POST("/lots", lotHandler.Create)
 		apiV1.GET("/lots", lotHandler.List)
+		apiV1.POST("/orders", orderHandler.Create)
 	}
 
 	router.GET("/health", func(c *gin.Context) {

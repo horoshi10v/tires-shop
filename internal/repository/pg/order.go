@@ -2,9 +2,11 @@ package pg
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
@@ -95,14 +97,50 @@ func (r *OrderRepo) CreateOrderTx(ctx context.Context, dto domain.CreateOrderDTO
 	return orderID, nil
 }
 
-// UpdateStatus changes the status of an existing order.
-func (r *OrderRepo) UpdateStatus(ctx context.Context, id uuid.UUID, status string) error {
-	result := r.db.WithContext(ctx).Model(&models.Order{}).Where("id = ?", id).Update("status", status)
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return fmt.Errorf("order not found")
-	}
-	return nil
+// UpdateStatus changes the status of an existing order and records an Audit Log atomically.
+func (r *OrderRepo) UpdateStatus(ctx context.Context, id uuid.UUID, newStatus string, userID uuid.UUID, comment string) error {
+	// Start transaction
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var order models.Order
+
+		// 1. Lock the order row to prevent race conditions during status change
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&order, "id = ?", id).Error; err != nil {
+			return fmt.Errorf("order not found or locked: %w", err)
+		}
+
+		oldStatus := order.Status
+
+		// If status is the same, do nothing
+		if oldStatus == newStatus {
+			return nil
+		}
+
+		// 2. Update the order
+		order.Status = newStatus
+		if err := tx.Save(&order).Error; err != nil {
+			return fmt.Errorf("failed to update order: %w", err)
+		}
+
+		// 3. Prepare old and new values for the Audit Log (as JSON)
+		oldVal, _ := json.Marshal(map[string]string{"status": oldStatus})
+		newVal, _ := json.Marshal(map[string]string{"status": newStatus})
+
+		// 4. Create the Audit Log record
+		auditLog := models.AuditLog{
+			Entity:   "ORDER",
+			EntityID: order.ID,
+			UserID:   userID,
+			Action:   "STATUS_CHANGED",
+			OldValue: datatypes.JSON(oldVal),
+			NewValue: datatypes.JSON(newVal),
+			Comment:  comment,
+		}
+
+		// 5. Save the Audit Log
+		if err := tx.Create(&auditLog).Error; err != nil {
+			return fmt.Errorf("failed to write audit log: %w", err)
+		}
+
+		return nil // Commit transaction
+	})
 }

@@ -160,6 +160,8 @@ definitions:
     type: object
   domain.UpdateOrderStatusDTO:
     properties:
+      comment:
+        type: string
       status:
         enum:
         - NEW
@@ -358,9 +360,9 @@ paths:
         name: id
         required: true
         type: string
-      - description: New status
+      - description: New status and comment
         in: body
-        name: status
+        name: data
         required: true
         schema:
           $ref: '#/definitions/domain.UpdateOrderStatusDTO'
@@ -399,7 +401,7 @@ paths:
             type: object
       security:
       - RoleAuth: []
-      summary: Update order status
+      summary: Update Order Status
       tags:
       - orders
 securityDefinitions:

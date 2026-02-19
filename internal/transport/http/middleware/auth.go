@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // RequireRole checks if the user has the required role to access the endpoint.
@@ -34,7 +35,12 @@ func RequireRole(allowedRoles ...string) gin.HandlerFunc {
 			return
 		}
 
-		// 4. Pass the request to the next handler (e.g., the actual controller)
+		// --- НОВОЕ: Имитируем ID авторизованного сотрудника ---
+		// В реальном проекте этот ID берется из JWT токена (claims.UserID)
+		dummyAdminID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+		c.Set("userID", dummyAdminID)
+		// --------------------------------------------------------
+
 		c.Next()
 	}
 }

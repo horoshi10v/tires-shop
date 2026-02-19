@@ -42,14 +42,14 @@ func (s *orderService) CreateOrder(ctx context.Context, dto domain.CreateOrderDT
 	return orderID, nil
 }
 
-func (s *orderService) UpdateOrderStatus(ctx context.Context, id uuid.UUID, status string) error {
+func (s *orderService) UpdateOrderStatus(ctx context.Context, id uuid.UUID, status string, userID uuid.UUID, comment string) error {
 	s.logger.Info("updating order status", slog.String("order_id", id.String()), slog.String("new_status", status))
 
-	if err := s.repo.UpdateStatus(ctx, id, status); err != nil {
+	if err := s.repo.UpdateStatus(ctx, id, status, userID, comment); err != nil {
 		return err
 	}
 
-	msg := fmt.Sprintf("🔄 Статус замовлення %s змінен на: %s", id.String(), status)
+	msg := fmt.Sprintf("🔄 Статус замовлення %s змінен на: %s. Коментарій: %s", id.String(), status, comment)
 	s.notifier.SendAlert(msg)
 
 	return nil

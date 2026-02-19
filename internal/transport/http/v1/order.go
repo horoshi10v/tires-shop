@@ -60,19 +60,19 @@ func (h *OrderHandler) Create(c *gin.Context) {
 
 // UpdateStatus handles the HTTP request to change an order's status.
 //
-//	@Summary      Update order status
+//	@Summary      Update Order Status
 //	@Description  Change the status of an existing order (e.g., NEW, PREPAYMENT, DONE, CANCELLED).
 //	@Tags         orders
 //	@Accept       json
 //	@Produce      json
 //	@Security     RoleAuth
-//	@Param        id     path      string                 true  "Order ID"
-//	@Param        status body      domain.UpdateOrderStatusDTO true "New status"
-//	@Success      200    {object}  map[string]string "OK"
-//	@Failure      400    {object}  map[string]string "Bad Request"
-//	@Failure      401    {object}  map[string]string "Unauthorized"
-//	@Failure      403    {object}  map[string]string "Forbidden"
-//	@Failure      500    {object}  map[string]string "Internal Server Error"
+//	@Param        id    path      string                       true  "Order ID"
+//	@Param        data  body      domain.UpdateOrderStatusDTO  true  "New status and comment"
+//	@Success      200   {object}  map[string]string "OK"
+//	@Failure      400   {object}  map[string]string "Bad Request"
+//	@Failure      401   {object}  map[string]string "Unauthorized"
+//	@Failure      403   {object}  map[string]string "Forbidden"
+//	@Failure      500   {object}  map[string]string "Internal Server Error"
 //	@Router       /staff/orders/{id}/status [put]
 func (h *OrderHandler) UpdateStatus(c *gin.Context) {
 	orderIDParam := c.Param("id")
@@ -88,10 +88,17 @@ func (h *OrderHandler) UpdateStatus(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.UpdateOrderStatus(c.Request.Context(), orderID, req.Status); err != nil {
+	userIDVal, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user identification missing"})
+		return
+	}
+	userID := userIDVal.(uuid.UUID)
+
+	if err := h.service.UpdateOrderStatus(c.Request.Context(), orderID, req.Status, userID, req.Comment); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "order status updated"})
+	c.JSON(http.StatusOK, gin.H{"message": "order status updated and logged"})
 }

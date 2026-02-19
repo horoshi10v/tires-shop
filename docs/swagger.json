@@ -289,7 +289,7 @@
                 "tags": [
                     "orders"
                 ],
-                "summary": "Update order status",
+                "summary": "Update Order Status",
                 "parameters": [
                     {
                         "type": "string",
@@ -299,8 +299,8 @@
                         "required": true
                     },
                     {
-                        "description": "New status",
-                        "name": "status",
+                        "description": "New status and comment",
+                        "name": "data",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -596,6 +596,9 @@
                 "status"
             ],
             "properties": {
+                "comment": {
+                    "type": "string"
+                },
                 "status": {
                     "type": "string",
                     "enum": [

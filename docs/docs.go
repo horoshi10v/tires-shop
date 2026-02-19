@@ -295,7 +295,7 @@ const docTemplate = `{
                 "tags": [
                     "orders"
                 ],
-                "summary": "Update order status",
+                "summary": "Update Order Status",
                 "parameters": [
                     {
                         "type": "string",
@@ -305,8 +305,8 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "New status",
-                        "name": "status",
+                        "description": "New status and comment",
+                        "name": "data",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -602,6 +602,9 @@ const docTemplate = `{
                 "status"
             ],
             "properties": {
+                "comment": {
+                    "type": "string"
+                },
                 "status": {
                     "type": "string",
                     "enum": [

@@ -6,8 +6,12 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/horoshi10v/tires-shop/internal/config"
 	"github.com/horoshi10v/tires-shop/internal/repository/models"
+	"github.com/horoshi10v/tires-shop/internal/repository/pg"
+	"github.com/horoshi10v/tires-shop/internal/service"
+	v1 "github.com/horoshi10v/tires-shop/internal/transport/http/v1"
 	"github.com/horoshi10v/tires-shop/pkg/database"
 )
 
@@ -36,9 +40,38 @@ func main() {
 		log.Error("migration failed", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
-	log.Info("migrations applied successfully")
 
+	// --- SEEDER: Create a default warehouse if none exists ---
+	var warehouseCount int64
+	db.Model(&models.Warehouse{}).Count(&warehouseCount)
+	if warehouseCount == 0 {
+		defaultWarehouse := models.Warehouse{
+			Name:     "Main Kyiv Warehouse",
+			Location: "Kyiv, Center",
+			IsActive: true,
+		}
+		db.Create(&defaultWarehouse)
+		log.Info("created default warehouse for testing", slog.String("warehouse_id", defaultWarehouse.ID.String()))
+	} else {
+		var w models.Warehouse
+		db.First(&w)
+		log.Info("using existing warehouse", slog.String("warehouse_id", w.ID.String()))
+	}
+	// ---------------------------------------------------------
+
+	// DI Container (Dependency Injection Setup)
+	lotRepo := pg.NewLotRepository(db)
+	lotService := service.NewLotService(lotRepo, log)
+	lotHandler := v1.NewLotHandler(lotService)
+
+	// Router Setup
 	router := gin.Default()
+
+	apiV1 := router.Group("/api/v1")
+	{
+		apiV1.POST("/lots", lotHandler.Create)
+		apiV1.GET("/lots", lotHandler.List)
+	}
 
 	router.GET("/health", func(c *gin.Context) {
 		sqlDB, _ := db.DB()
@@ -53,8 +86,7 @@ func main() {
 	log.Info("server starting", slog.String("address", srvAddr))
 
 	if err := router.Run(srvAddr); err != nil {
-		log.Error("failed to start server", slog.String("error", err.Error()))
-		os.Exit(1)
+		log.Error("server error", slog.String("error", err.Error()))
 	}
 }
 

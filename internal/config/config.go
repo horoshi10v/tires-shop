@@ -23,6 +23,7 @@ type DB struct {
 	User     string `yaml:"user" env:"POSTGRES_USER" env-default:"user"`
 	Password string `yaml:"password" env:"POSTGRES_PASSWORD"`
 	Name     string `yaml:"name" env:"POSTGRES_DB" env-default:"tires_shop"`
+	SSLMode  string `yaml:"ssl_mode" env:"POSTGRES_SSLMODE" env-default:"disable"`
 }
 
 func MustLoad() *Config {

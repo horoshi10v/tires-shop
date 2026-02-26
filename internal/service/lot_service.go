@@ -6,19 +6,22 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/horoshi10v/tires-shop/internal/domain"
+	"github.com/horoshi10v/tires-shop/internal/infrastructure/qrcode"
 )
 
 // lotService implements domain.LotService.
 type lotService struct {
 	repo   domain.LotRepository
 	logger *slog.Logger
+	qrGen  qrcode.Generator
 }
 
 // NewLotService initializes the business logic layer for lots.
-func NewLotService(repo domain.LotRepository, logger *slog.Logger) domain.LotService {
+func NewLotService(repo domain.LotRepository, logger *slog.Logger, qrGen qrcode.Generator) domain.LotService {
 	return &lotService{
 		repo:   repo,
 		logger: logger,
+		qrGen:  qrGen,
 	}
 }
 
@@ -50,6 +53,21 @@ func (s *lotService) ListInternalLots(ctx context.Context, filter domain.LotFilt
 	filter = sanitizePagination(filter)
 	s.logger.Debug("fetching internal lots", slog.Int("page", filter.Page))
 	return s.repo.ListInternal(ctx, filter)
+}
+
+func (s *lotService) GenerateLotQR(ctx context.Context, id uuid.UUID) ([]byte, error) {
+	s.logger.Info("generating qr code for lot", slog.String("lot_id", id.String()))
+
+	dataToEncode := id.String()
+
+	// PNG 256x256
+	pngBytes, err := s.qrGen.GeneratePNG(dataToEncode, 256)
+	if err != nil {
+		s.logger.Error("failed to generate qr png", slog.String("error", err.Error()))
+		return nil, err
+	}
+
+	return pngBytes, nil
 }
 
 // Helper function to ensure pagination is valid

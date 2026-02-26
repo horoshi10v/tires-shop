@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/horoshi10v/tires-shop/internal/domain"
 )
 
@@ -116,4 +117,34 @@ func buildLotFilter(c *gin.Context) domain.LotFilter {
 		Brand:    c.Query("brand"),
 		Type:     c.Query("type"),
 	}
+}
+
+// GetQR returns a PNG image of the QR code for a specific lot.
+//
+//	@Summary      Get Lot QR Code
+//	@Description  Generates and returns a PNG image of a QR code containing the Lot ID.
+//	@Tags         lots-admin
+//	@Produce      image/png
+//	@Security     RoleAuth
+//	@Param        id   path      string  true  "Lot ID"
+//	@Success      200  {file}    file    "PNG Image"
+//	@Failure      400  {object}  map[string]string
+//	@Failure      500  {object}  map[string]string
+//	@Router       /staff/lots/{id}/qr [get]
+func (h *LotHandler) GetQR(c *gin.Context) {
+	idParam := c.Param("id")
+	lotID, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid lot id format"})
+		return
+	}
+
+	pngBytes, err := h.service.GenerateLotQR(c.Request.Context(), lotID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate qr code"})
+		return
+	}
+
+	// Магия Gin: отдаем сырые байты как картинку
+	c.Data(http.StatusOK, "image/png", pngBytes)
 }

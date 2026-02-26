@@ -88,4 +88,5 @@ type LotService interface {
 	CreateLot(ctx context.Context, dto CreateLotDTO) (uuid.UUID, error)
 	ListPublicLots(ctx context.Context, filter LotFilter) ([]LotPublicResponse, int64, error)
 	ListInternalLots(ctx context.Context, filter LotFilter) ([]LotInternalResponse, int64, error)
+	GenerateLotQR(ctx context.Context, id uuid.UUID) ([]byte, error)
 }

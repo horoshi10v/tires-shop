@@ -369,6 +369,58 @@
                 }
             }
         },
+        "/staff/lots/{id}/qr": {
+            "get": {
+                "security": [
+                    {
+                        "RoleAuth": []
+                    }
+                ],
+                "description": "Generates and returns a PNG image of a QR code containing the Lot ID.",
+                "produces": [
+                    "image/png"
+                ],
+                "tags": [
+                    "lots-admin"
+                ],
+                "summary": "Get Lot QR Code",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Lot ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "PNG Image",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/staff/orders": {
             "post": {
                 "security": [

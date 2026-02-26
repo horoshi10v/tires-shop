@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/horoshi10v/tires-shop/internal/infrastructure/qrcode"
 	"github.com/horoshi10v/tires-shop/internal/infrastructure/telegram"
 
 	swaggerFiles "github.com/swaggo/files"
@@ -90,13 +91,15 @@ func main() {
 	tgNotifier := telegram.NewNotifier(log)
 	tgNotifier.Start(context.Background())
 
+	qrGenerator := qrcode.NewQRGenerator()
+
 	// DI Container
 	userRepo := pg.NewUserRepository(db)
 	authService := service.NewAuthService(userRepo, cfg, log)
 	authHandler := v1.NewAuthHandler(authService)
 
 	lotRepo := pg.NewLotRepository(db)
-	lotService := service.NewLotService(lotRepo, log)
+	lotService := service.NewLotService(lotRepo, log, qrGenerator)
 	lotHandler := v1.NewLotHandler(lotService)
 
 	orderRepo := pg.NewOrderRepository(db)
@@ -133,6 +136,7 @@ func main() {
 	{
 		staffAPI.GET("/lots", lotHandler.ListInternal)
 		staffAPI.POST("/lots", lotHandler.Create)
+		staffAPI.GET("/lots/:id/qr", lotHandler.GetQR)
 		staffAPI.PATCH("/orders/:id/status", orderHandler.UpdateStatus)
 		staffAPI.POST("/transfers", transferHandler.Create)
 		staffAPI.POST("/transfers/:id/accept", transferHandler.Accept)

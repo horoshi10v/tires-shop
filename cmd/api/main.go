@@ -31,7 +31,8 @@ import (
 // @BasePath        /api/v1
 // @securityDefinitions.apikey RoleAuth
 // @in              header
-// @name            X-User-Role
+// @name            Authorization
+// @description     Введите токен в формате: Bearer {token}
 func main() {
 	cfg := config.MustLoad()
 
@@ -60,6 +61,8 @@ func main() {
 		&models.OrderItem{},
 		&models.AuditLog{},
 		&models.User{},
+		&models.Transfer{},
+		&models.TransferItem{},
 	); err != nil {
 		log.Error("migration failed", slog.String("error", err.Error()))
 		os.Exit(1)
@@ -104,6 +107,14 @@ func main() {
 	reportService := service.NewReportService(reportRepo, log)
 	reportHandler := v1.NewReportHandler(reportService)
 
+	transferRepo := pg.NewTransferRepository(db)
+	transferService := service.NewTransferService(transferRepo, log, tgNotifier)
+	transferHandler := v1.NewTransferHandler(transferService)
+
+	warehouseRepo := pg.NewWarehouseRepository(db)
+	warehouseService := service.NewWarehouseService(warehouseRepo, log)
+	warehouseHandler := v1.NewWarehouseHandler(warehouseService)
+
 	// Router Setup
 	router := gin.Default()
 
@@ -123,6 +134,9 @@ func main() {
 		staffAPI.GET("/lots", lotHandler.ListInternal)
 		staffAPI.POST("/lots", lotHandler.Create)
 		staffAPI.PATCH("/orders/:id/status", orderHandler.UpdateStatus)
+		staffAPI.POST("/transfers", transferHandler.Create)
+		staffAPI.POST("/transfers/:id/accept", transferHandler.Accept)
+		staffAPI.GET("/warehouses", warehouseHandler.List)
 	}
 
 	// Admin Routes
@@ -130,6 +144,9 @@ func main() {
 	adminAPI.Use(middleware.RequireRole(cfg.Auth.JWTSecret, "ADMIN"))
 	{
 		adminAPI.GET("/reports/pnl", reportHandler.GetPnL)
+		adminAPI.POST("/warehouses", warehouseHandler.Create)
+		adminAPI.PUT("/warehouses/:id", warehouseHandler.Update)
+		adminAPI.DELETE("/warehouses/:id", warehouseHandler.Delete)
 	}
 
 	router.GET("/health", func(c *gin.Context) {

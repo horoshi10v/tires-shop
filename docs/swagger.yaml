@@ -75,6 +75,35 @@ definitions:
     - customer_phone
     - items
     type: object
+  domain.CreateTransferDTO:
+    properties:
+      comment:
+        type: string
+      from_warehouse_id:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/domain.TransferItemDTO'
+        minItems: 1
+        type: array
+      to_warehouse_id:
+        type: string
+    required:
+    - from_warehouse_id
+    - items
+    - to_warehouse_id
+    type: object
+  domain.CreateWarehouseDTO:
+    properties:
+      location:
+        type: string
+      name:
+        minLength: 3
+        type: string
+    required:
+    - location
+    - name
+    type: object
   domain.LotInternalResponse:
     properties:
       brand:
@@ -173,6 +202,16 @@ definitions:
         description: Total sales amount
         type: number
     type: object
+  domain.TransferItemDTO:
+    properties:
+      lot_id:
+        type: string
+      quantity:
+        type: integer
+    required:
+    - lot_id
+    - quantity
+    type: object
   domain.UpdateOrderStatusDTO:
     properties:
       comment:
@@ -186,6 +225,19 @@ definitions:
         type: string
     required:
     - status
+    type: object
+  domain.UpdateWarehouseDTO:
+    properties:
+      is_active:
+        type: boolean
+      location:
+        type: string
+      name:
+        minLength: 3
+        type: string
+    required:
+    - location
+    - name
     type: object
   domain.User:
     properties:
@@ -210,6 +262,17 @@ definitions:
     - RoleAdmin
     - RoleStaff
     - RoleBuyer
+  domain.Warehouse:
+    properties:
+      id:
+        type: string
+      is_active:
+        type: boolean
+      location:
+        type: string
+      name:
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact:
@@ -218,6 +281,81 @@ info:
   title: Tires Shop CRM API
   version: "1.0"
 paths:
+  /admin/warehouses:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Warehouse details
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateWarehouseDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - RoleAuth: []
+      summary: Create Warehouse
+      tags:
+      - warehouses
+  /admin/warehouses/{id}:
+    delete:
+      parameters:
+      - description: Warehouse ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - RoleAuth: []
+      summary: Delete Warehouse
+      tags:
+      - warehouses
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Warehouse ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated details
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UpdateWarehouseDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - RoleAuth: []
+      summary: Update Warehouse
+      tags:
+      - warehouses
   /auth/telegram:
     post:
       consumes:
@@ -476,9 +614,74 @@ paths:
       summary: Update Order Status
       tags:
       - orders
+  /staff/transfers:
+    post:
+      consumes:
+      - application/json
+      description: 'Moves stock from one warehouse to another (Status: IN_TRANSIT).'
+      parameters:
+      - description: Transfer details
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateTransferDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - RoleAuth: []
+      summary: Create Transfer
+      tags:
+      - transfers
+  /staff/transfers/{id}/accept:
+    post:
+      description: 'Receives the stock at the destination warehouse (Status: ACCEPTED).'
+      parameters:
+      - description: Transfer ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - RoleAuth: []
+      summary: Accept Transfer
+      tags:
+      - transfers
+  /staff/warehouses:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Warehouse'
+            type: array
+      security:
+      - RoleAuth: []
+      summary: List Warehouses
+      tags:
+      - warehouses
 securityDefinitions:
   RoleAuth:
+    description: 'Введите токен в формате: Bearer {token}'
     in: header
-    name: X-User-Role
+    name: Authorization
     type: apiKey
 swagger: "2.0"

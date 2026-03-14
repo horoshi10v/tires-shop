@@ -192,14 +192,17 @@ definitions:
     type: object
   domain.PnLReport:
     properties:
-      cogs:
-        description: Cost Of Goods Sold (Purchase price)
+      by_warehouse:
+        items:
+          $ref: '#/definitions/domain.WarehousePnL'
+        type: array
+      total_cogs:
         type: number
-      profit:
-        description: Revenue - COGS
+      total_items_sold:
+        type: integer
+      total_profit:
         type: number
-      revenue:
-        description: Total sales amount
+      total_revenue:
         type: number
     type: object
   domain.TransferItemDTO:
@@ -273,6 +276,19 @@ definitions:
       name:
         type: string
     type: object
+  domain.WarehousePnL:
+    properties:
+      cogs:
+        type: number
+      items_sold:
+        type: integer
+      profit:
+        type: number
+      revenue:
+        type: number
+      warehouse_name:
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact:
@@ -281,6 +297,38 @@ info:
   title: Tires Shop CRM API
   version: "1.0"
 paths:
+  /admin/exports/inventory:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: URL of the Google Sheet
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - RoleAuth: []
+      summary: Export Inventory to Google Sheets
+      tags:
+      - exports
+  /admin/exports/pnl:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: URL of the Google Sheet
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - RoleAuth: []
+      summary: Export P&L to Google Sheets
+      tags:
+      - exports
   /admin/warehouses:
     post:
       consumes:

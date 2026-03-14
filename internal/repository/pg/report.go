@@ -19,23 +19,37 @@ func NewReportRepository(db *gorm.DB) domain.ReportRepository {
 // GetPnL executes a raw SQL query to calculate financials.
 // This demonstrates ability to write complex analytical queries manually.
 func (r *ReportRepo) GetPnL(ctx context.Context) (*domain.PnLReport, error) {
-	var report domain.PnLReport
-
-	// The SQL query calculates Revenue, COGS, and Profit across all DONE orders.
-	// COALESCE is used to return 0 instead of NULL if there are no finished orders yet.
 	query := `
 		SELECT 
+			w.name as warehouse_name,
+			COALESCE(SUM(oi.quantity), 0) as items_sold,
 			COALESCE(SUM(oi.quantity * oi.price_at_moment), 0) as revenue,
 			COALESCE(SUM(oi.quantity * oi.cost_at_moment), 0) as cogs,
 			COALESCE(SUM(oi.quantity * (oi.price_at_moment - oi.cost_at_moment)), 0) as profit
 		FROM order_items oi
 		JOIN orders o ON o.id = oi.order_id
+		JOIN lots l ON oi.lot_id = l.id
+		JOIN warehouses w ON l.warehouse_id = w.id
 		WHERE o.status = 'DONE' AND o.deleted_at IS NULL
+		GROUP BY w.id, w.name
+		ORDER BY w.name
 	`
 
-	if err := r.db.WithContext(ctx).Raw(query).Scan(&report).Error; err != nil {
+	var warehousePnLs []domain.WarehousePnL
+	if err := r.db.WithContext(ctx).Raw(query).Scan(&warehousePnLs).Error; err != nil {
 		return nil, err
 	}
 
-	return &report, nil
+	report := &domain.PnLReport{
+		ByWarehouse: warehousePnLs,
+	}
+
+	for _, wpnl := range warehousePnLs {
+		report.TotalItemsSold += wpnl.ItemsSold
+		report.TotalRevenue += wpnl.Revenue
+		report.TotalCOGS += wpnl.COGS
+		report.TotalProfit += wpnl.Profit
+	}
+
+	return report, nil
 }

@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/horoshi10v/tires-shop/internal/infrastructure/googlesheets"
 	"github.com/horoshi10v/tires-shop/internal/infrastructure/qrcode"
 	"github.com/horoshi10v/tires-shop/internal/infrastructure/telegram"
 
@@ -93,6 +94,16 @@ func main() {
 
 	qrGenerator := qrcode.NewQRGenerator()
 
+	googleExporter, err := googlesheets.NewGoogleExporter(
+		context.Background(),
+		"google-credentials.json",
+		cfg.GoogleSpreadsheetID,
+	)
+	if err != nil {
+		log.Error("failed to init google exporter", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
 	// DI Container
 	userRepo := pg.NewUserRepository(db)
 	authService := service.NewAuthService(userRepo, cfg, log)
@@ -117,6 +128,9 @@ func main() {
 	warehouseRepo := pg.NewWarehouseRepository(db)
 	warehouseService := service.NewWarehouseService(warehouseRepo, log)
 	warehouseHandler := v1.NewWarehouseHandler(warehouseService)
+
+	exportService := service.NewExportService(lotRepo, reportRepo, googleExporter, log)
+	exportHandler := v1.NewExportHandler(exportService)
 
 	// Router Setup
 	router := gin.Default()
@@ -151,6 +165,8 @@ func main() {
 		adminAPI.POST("/warehouses", warehouseHandler.Create)
 		adminAPI.PUT("/warehouses/:id", warehouseHandler.Update)
 		adminAPI.DELETE("/warehouses/:id", warehouseHandler.Delete)
+		adminAPI.GET("/exports/inventory", exportHandler.ExportInventory)
+		adminAPI.GET("/exports/pnl", exportHandler.ExportPnL)
 	}
 
 	router.GET("/health", func(c *gin.Context) {

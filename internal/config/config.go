@@ -9,10 +9,11 @@ import (
 )
 
 type Config struct {
-	Env        string `yaml:"env" env:"ENV" env-default:"local"`
-	HTTPServer `yaml:"http_server"`
-	DB         `yaml:"db"`
-	Auth       `yaml:"auth"`
+	Env                 string `yaml:"env" env:"ENV" env-default:"local"`
+	HTTPServer          `yaml:"http_server"`
+	DB                  `yaml:"db"`
+	Auth                `yaml:"auth"`
+	GoogleSpreadsheetID string `yaml:"google_spreadsheet_id" env:"GOOGLE_SPREADSHEET_ID"`
 }
 
 type HTTPServer struct {

@@ -17,6 +17,60 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/admin/exports/inventory": {
+            "get": {
+                "security": [
+                    {
+                        "RoleAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exports"
+                ],
+                "summary": "Export Inventory to Google Sheets",
+                "responses": {
+                    "200": {
+                        "description": "URL of the Google Sheet",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/exports/pnl": {
+            "get": {
+                "security": [
+                    {
+                        "RoleAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exports"
+                ],
+                "summary": "Export P\u0026L to Google Sheets",
+                "responses": {
+                    "200": {
+                        "description": "URL of the Google Sheet",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/admin/warehouses": {
             "post": {
                 "security": [
@@ -976,16 +1030,22 @@ const docTemplate = `{
         "domain.PnLReport": {
             "type": "object",
             "properties": {
-                "cogs": {
-                    "description": "Cost Of Goods Sold (Purchase price)",
+                "by_warehouse": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.WarehousePnL"
+                    }
+                },
+                "total_cogs": {
                     "type": "number"
                 },
-                "profit": {
-                    "description": "Revenue - COGS",
+                "total_items_sold": {
+                    "type": "integer"
+                },
+                "total_profit": {
                     "type": "number"
                 },
-                "revenue": {
-                    "description": "Total sales amount",
+                "total_revenue": {
                     "type": "number"
                 }
             }
@@ -1090,6 +1150,26 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.WarehousePnL": {
+            "type": "object",
+            "properties": {
+                "cogs": {
+                    "type": "number"
+                },
+                "items_sold": {
+                    "type": "integer"
+                },
+                "profit": {
+                    "type": "number"
+                },
+                "revenue": {
+                    "type": "number"
+                },
+                "warehouse_name": {
                     "type": "string"
                 }
             }

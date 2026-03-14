@@ -213,6 +213,38 @@ definitions:
     - lot_id
     - quantity
     type: object
+  domain.UpdateLotDTO:
+    properties:
+      brand:
+        type: string
+      condition:
+        enum:
+        - NEW
+        - USED
+        type: string
+      defects:
+        type: string
+      model:
+        type: string
+      params:
+        $ref: '#/definitions/domain.LotParams'
+      photos:
+        items:
+          type: string
+        type: array
+      purchase_price:
+        type: number
+      sell_price:
+        type: number
+      type:
+        enum:
+        - TIRE
+        - RIM
+        type: string
+      warehouse_id:
+        description: 'Optional: Move lot to another warehouse (inventory implication?)'
+        type: string
+    type: object
   domain.UpdateOrderStatusDTO:
     properties:
       comment:
@@ -560,6 +592,83 @@ paths:
       security:
       - RoleAuth: []
       summary: Create a new lot
+      tags:
+      - lots-staff
+  /staff/lots/{id}:
+    delete:
+      description: Soft delete a lot.
+      parameters:
+      - description: Lot ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - RoleAuth: []
+      summary: Delete a lot
+      tags:
+      - lots-staff
+    put:
+      consumes:
+      - application/json
+      description: Update details of an existing lot.
+      parameters:
+      - description: Lot ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Lot update details
+        in: body
+        name: lot
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UpdateLotDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - RoleAuth: []
+      summary: Update a lot
       tags:
       - lots-staff
   /staff/lots/{id}/qr:

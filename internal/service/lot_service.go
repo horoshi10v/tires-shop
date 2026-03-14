@@ -43,6 +43,32 @@ func (s *lotService) CreateLot(ctx context.Context, dto domain.CreateLotDTO) (uu
 	return id, nil
 }
 
+// UpdateLot handles updating an existing lot.
+func (s *lotService) UpdateLot(ctx context.Context, id uuid.UUID, dto domain.UpdateLotDTO) error {
+	s.logger.Debug("attempting to update lot", slog.String("lot_id", id.String()))
+
+	if err := s.repo.Update(ctx, id, &dto); err != nil {
+		s.logger.Error("failed to update lot", slog.String("lot_id", id.String()), slog.String("error", err.Error()))
+		return err
+	}
+
+	s.logger.Info("lot updated successfully", slog.String("lot_id", id.String()))
+	return nil
+}
+
+// DeleteLot handles soft deletion of a lot.
+func (s *lotService) DeleteLot(ctx context.Context, id uuid.UUID) error {
+	s.logger.Debug("attempting to delete lot", slog.String("lot_id", id.String()))
+
+	if err := s.repo.Delete(ctx, id); err != nil {
+		s.logger.Error("failed to delete lot", slog.String("lot_id", id.String()), slog.String("error", err.Error()))
+		return err
+	}
+
+	s.logger.Info("lot deleted successfully", slog.String("lot_id", id.String()))
+	return nil
+}
+
 func (s *lotService) ListPublicLots(ctx context.Context, filter domain.LotFilter) ([]domain.LotPublicResponse, int64, error) {
 	filter = sanitizePagination(filter)
 	s.logger.Debug("fetching public lots", slog.Int("page", filter.Page))

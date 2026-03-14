@@ -45,6 +45,70 @@ func (h *LotHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"message": "lot created", "lot_id": id})
 }
 
+// Update handles updating an existing lot.
+//
+//	@Summary      Update a lot
+//	@Description  Update details of an existing lot.
+//	@Tags         lots-staff
+//	@Accept       json
+//	@Produce      json
+//	@Security     RoleAuth
+//	@Param        id   path      string               true  "Lot ID"
+//	@Param        lot  body      domain.UpdateLotDTO  true  "Lot update details"
+//	@Success      200  {object}  map[string]string
+//	@Failure      400  {object}  map[string]string
+//	@Failure      500  {object}  map[string]string
+//	@Router       /staff/lots/{id} [put]
+func (h *LotHandler) Update(c *gin.Context) {
+	idParam := c.Param("id")
+	lotID, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid lot id format"})
+		return
+	}
+
+	var req domain.UpdateLotDTO
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payload", "details": err.Error()})
+		return
+	}
+
+	if err := h.service.UpdateLot(c.Request.Context(), lotID, req); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update lot", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "lot updated successfully"})
+}
+
+// Delete handles deleting a lot.
+//
+//	@Summary      Delete a lot
+//	@Description  Soft delete a lot.
+//	@Tags         lots-staff
+//	@Produce      json
+//	@Security     RoleAuth
+//	@Param        id   path      string  true  "Lot ID"
+//	@Success      200  {object}  map[string]string
+//	@Failure      400  {object}  map[string]string
+//	@Failure      500  {object}  map[string]string
+//	@Router       /staff/lots/{id} [delete]
+func (h *LotHandler) Delete(c *gin.Context) {
+	idParam := c.Param("id")
+	lotID, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid lot id format"})
+		return
+	}
+
+	if err := h.service.DeleteLot(c.Request.Context(), lotID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete lot", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "lot deleted successfully"})
+}
+
 // ListPublic retrieves a list of lots for buyers (hides sensitive data).
 //
 //	@Summary      List available lots (Public)

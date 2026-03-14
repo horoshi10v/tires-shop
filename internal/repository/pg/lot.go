@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 
@@ -52,6 +53,72 @@ func (r *LotRepo) Create(ctx context.Context, dto *domain.CreateLotDTO) (uuid.UU
 	}
 
 	return dbModel.ID, nil
+}
+
+// Update updates an existing lot in the database.
+func (r *LotRepo) Update(ctx context.Context, id uuid.UUID, dto *domain.UpdateLotDTO) error {
+	updates := map[string]interface{}{}
+
+	if dto.WarehouseID != nil {
+		updates["warehouse_id"] = *dto.WarehouseID
+	}
+	if dto.Type != nil {
+		updates["type"] = models.LotType(*dto.Type)
+	}
+	if dto.Condition != nil {
+		updates["condition"] = models.LotCondition(*dto.Condition)
+	}
+	if dto.Brand != nil {
+		updates["brand"] = *dto.Brand
+	}
+	if dto.Model != nil {
+		updates["model"] = *dto.Model
+	}
+	if dto.Params != nil {
+		paramsBytes, err := json.Marshal(dto.Params)
+		if err != nil {
+			return fmt.Errorf("failed to marshal params: %w", err)
+		}
+		updates["params"] = datatypes.JSON(paramsBytes)
+	}
+	if dto.Defects != nil {
+		updates["defects"] = *dto.Defects
+	}
+	if dto.Photos != nil {
+		updates["photos"] = pq.StringArray(dto.Photos)
+	}
+	if dto.PurchasePrice != nil {
+		updates["purchase_price"] = *dto.PurchasePrice
+	}
+	if dto.SellPrice != nil {
+		updates["sell_price"] = *dto.SellPrice
+	}
+
+	if len(updates) == 0 {
+		return nil
+	}
+
+	result := r.db.WithContext(ctx).Model(&models.Lot{}).Where("id = ?", id).Updates(updates)
+	if result.Error != nil {
+		return fmt.Errorf("failed to update lot: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("lot not found")
+	}
+
+	return nil
+}
+
+// Delete performs a soft delete on a lot.
+func (r *LotRepo) Delete(ctx context.Context, id uuid.UUID) error {
+	result := r.db.WithContext(ctx).Delete(&models.Lot{}, id)
+	if result.Error != nil {
+		return fmt.Errorf("failed to delete lot: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("lot not found")
+	}
+	return nil
 }
 
 // ListPublic retrieves a paginated list of lots for Buyers (hides sensitive info and archives).

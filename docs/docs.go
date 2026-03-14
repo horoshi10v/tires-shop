@@ -511,6 +511,126 @@ const docTemplate = `{
                 }
             }
         },
+        "/staff/lots/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "RoleAuth": []
+                    }
+                ],
+                "description": "Update details of an existing lot.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "lots-staff"
+                ],
+                "summary": "Update a lot",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Lot ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Lot update details",
+                        "name": "lot",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.UpdateLotDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "RoleAuth": []
+                    }
+                ],
+                "description": "Soft delete a lot.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "lots-staff"
+                ],
+                "summary": "Delete a lot",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Lot ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/staff/lots/{id}/qr": {
             "get": {
                 "security": [
@@ -1142,6 +1262,53 @@ const docTemplate = `{
                 },
                 "quantity": {
                     "type": "integer"
+                }
+            }
+        },
+        "domain.UpdateLotDTO": {
+            "type": "object",
+            "properties": {
+                "brand": {
+                    "type": "string"
+                },
+                "condition": {
+                    "type": "string",
+                    "enum": [
+                        "NEW",
+                        "USED"
+                    ]
+                },
+                "defects": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "params": {
+                    "$ref": "#/definitions/domain.LotParams"
+                },
+                "photos": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "purchase_price": {
+                    "type": "number"
+                },
+                "sell_price": {
+                    "type": "number"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "TIRE",
+                        "RIM"
+                    ]
+                },
+                "warehouse_id": {
+                    "description": "Optional: Move lot to another warehouse (inventory implication?)",
+                    "type": "string"
                 }
             }
         },

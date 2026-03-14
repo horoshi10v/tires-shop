@@ -166,6 +166,8 @@ func main() {
 	{
 		staffAPI.GET("/lots", lotHandler.ListInternal)
 		staffAPI.POST("/lots", lotHandler.Create)
+		staffAPI.PUT("/lots/:id", lotHandler.Update)
+		staffAPI.DELETE("/lots/:id", lotHandler.Delete)
 		staffAPI.GET("/lots/:id/qr", lotHandler.GetQR)
 		staffAPI.PATCH("/orders/:id/status", orderHandler.UpdateStatus)
 		staffAPI.POST("/transfers", transferHandler.Create)

@@ -41,6 +41,20 @@ type CreateLotDTO struct {
 	SellPrice       float64   `json:"sell_price" binding:"required,gt=0"`
 }
 
+// UpdateLotDTO contains fields that can be updated.
+type UpdateLotDTO struct {
+	WarehouseID   *uuid.UUID `json:"warehouse_id"` // Optional: Move lot to another warehouse (inventory implication?)
+	Type          *string    `json:"type" binding:"omitempty,oneof=TIRE RIM"`
+	Condition     *string    `json:"condition" binding:"omitempty,oneof=NEW USED"`
+	Brand         *string    `json:"brand"`
+	Model         *string    `json:"model"`
+	Params        *LotParams `json:"params"`
+	Defects       *string    `json:"defects"`
+	Photos        []string   `json:"photos"`
+	PurchasePrice *float64   `json:"purchase_price" binding:"omitempty,gt=0"`
+	SellPrice     *float64   `json:"sell_price" binding:"omitempty,gt=0"`
+}
+
 // LotFilter defines the criteria for searching and paginating lots.
 type LotFilter struct {
 	Page     int
@@ -76,6 +90,8 @@ type LotInternalResponse struct {
 // LotRepository defines database operations for the Lot entity.
 type LotRepository interface {
 	Create(ctx context.Context, dto *CreateLotDTO) (uuid.UUID, error)
+	Update(ctx context.Context, id uuid.UUID, dto *UpdateLotDTO) error
+	Delete(ctx context.Context, id uuid.UUID) error
 	ListPublic(ctx context.Context, filter LotFilter) ([]LotPublicResponse, int64, error)
 	ListInternal(ctx context.Context, filter LotFilter) ([]LotInternalResponse, int64, error)
 }
@@ -83,6 +99,8 @@ type LotRepository interface {
 // LotService defines business logic operations for the Lot entity.
 type LotService interface {
 	CreateLot(ctx context.Context, dto CreateLotDTO) (uuid.UUID, error)
+	UpdateLot(ctx context.Context, id uuid.UUID, dto UpdateLotDTO) error
+	DeleteLot(ctx context.Context, id uuid.UUID) error
 	ListPublicLots(ctx context.Context, filter LotFilter) ([]LotPublicResponse, int64, error)
 	ListInternalLots(ctx context.Context, filter LotFilter) ([]LotInternalResponse, int64, error)
 	GenerateLotQR(ctx context.Context, id uuid.UUID) ([]byte, error)

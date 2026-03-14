@@ -505,6 +505,55 @@ paths:
       summary: List available lots (Public)
       tags:
       - lots-public
+  /orders:
+    post:
+      consumes:
+      - application/json
+      description: Place a new order with customer details and tire items.
+      parameters:
+      - description: Order details
+        in: body
+        name: order
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateOrderDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - RoleAuth: []
+      summary: Create a new order
+      tags:
+      - orders
   /reports/pnl:
     get:
       consumes:
@@ -757,55 +806,6 @@ paths:
       summary: Upload a photo
       tags:
       - media
-  /staff/orders:
-    post:
-      consumes:
-      - application/json
-      description: Place a new order with customer details and tire items.
-      parameters:
-      - description: Order details
-        in: body
-        name: order
-        required: true
-        schema:
-          $ref: '#/definitions/domain.CreateOrderDTO'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - RoleAuth: []
-      summary: Create a new order
-      tags:
-      - orders
   /staff/orders/{id}/status:
     put:
       consumes:

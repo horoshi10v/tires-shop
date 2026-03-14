@@ -32,7 +32,7 @@ func NewOrderHandler(service domain.OrderService) *OrderHandler {
 //	@Failure      401    {object}  map[string]string "Unauthorized"
 //	@Failure      403    {object}  map[string]string "Forbidden"
 //	@Failure      500    {object}  map[string]string "Internal Server Error"
-//	@Router       /staff/orders [post]
+//	@Router       /orders [post]
 func (h *OrderHandler) Create(c *gin.Context) {
 	var req domain.CreateOrderDTO
 

@@ -156,8 +156,13 @@ func main() {
 	publicAPI := router.Group("/api/v1")
 	{
 		publicAPI.GET("/lots", lotHandler.ListPublic)
-		publicAPI.POST("/orders", orderHandler.Create)
 		publicAPI.POST("/auth/telegram", authHandler.LoginTelegram)
+	}
+
+	clientAPI := router.Group("/api/v1")
+	clientAPI.Use(middleware.RequireRole(cfg.Auth.JWTSecret, "BUYER", "STAFF", "ADMIN"))
+	{
+		clientAPI.POST("/orders", orderHandler.Create)
 	}
 
 	// Staff Routes

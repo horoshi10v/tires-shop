@@ -429,6 +429,88 @@ const docTemplate = `{
                 }
             }
         },
+        "/staff/lots/photo": {
+            "delete": {
+                "security": [
+                    {
+                        "RoleAuth": []
+                    }
+                ],
+                "description": "Removes the image from MinIO using its public URL.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "media"
+                ],
+                "summary": "Delete a photo",
+                "parameters": [
+                    {
+                        "description": "Public URL of the photo to delete",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.DeletePhotoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/staff/lots/upload": {
+            "post": {
+                "security": [
+                    {
+                        "RoleAuth": []
+                    }
+                ],
+                "description": "Compresses the image to JPEG, uploads to MinIO, and returns the public URL.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "media"
+                ],
+                "summary": "Upload a photo",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Image file to upload",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Returns the public URL of the uploaded image",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/staff/lots/{id}/qr": {
             "get": {
                 "security": [
@@ -794,7 +876,6 @@ const docTemplate = `{
                     ]
                 },
                 "defects": {
-                    "description": "Description of damages, if any",
                     "type": "string"
                 },
                 "initial_quantity": {
@@ -814,7 +895,6 @@ const docTemplate = `{
                     }
                 },
                 "purchase_price": {
-                    "description": "Hidden from buyer",
                     "type": "number"
                 },
                 "sell_price": {
@@ -1173,6 +1253,17 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "v1.DeletePhotoRequest": {
+            "type": "object",
+            "required": [
+                "url"
+            ],
+            "properties": {
+                "url": {
+                    "type": "string"
+                }
+            }
         }
     },
     "securityDefinitions": {
@@ -1188,7 +1279,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:8080",
+	Host:             "localhost:8083",
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
 	Title:            "Tires Shop CRM API",

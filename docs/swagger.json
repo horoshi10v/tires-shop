@@ -8,7 +8,7 @@
         },
         "version": "1.0"
     },
-    "host": "localhost:8080",
+    "host": "localhost:8083",
     "basePath": "/api/v1",
     "paths": {
         "/admin/exports/inventory": {
@@ -423,6 +423,88 @@
                 }
             }
         },
+        "/staff/lots/photo": {
+            "delete": {
+                "security": [
+                    {
+                        "RoleAuth": []
+                    }
+                ],
+                "description": "Removes the image from MinIO using its public URL.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "media"
+                ],
+                "summary": "Delete a photo",
+                "parameters": [
+                    {
+                        "description": "Public URL of the photo to delete",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.DeletePhotoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/staff/lots/upload": {
+            "post": {
+                "security": [
+                    {
+                        "RoleAuth": []
+                    }
+                ],
+                "description": "Compresses the image to JPEG, uploads to MinIO, and returns the public URL.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "media"
+                ],
+                "summary": "Upload a photo",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Image file to upload",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Returns the public URL of the uploaded image",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/staff/lots/{id}/qr": {
             "get": {
                 "security": [
@@ -788,7 +870,6 @@
                     ]
                 },
                 "defects": {
-                    "description": "Description of damages, if any",
                     "type": "string"
                 },
                 "initial_quantity": {
@@ -808,7 +889,6 @@
                     }
                 },
                 "purchase_price": {
-                    "description": "Hidden from buyer",
                     "type": "number"
                 },
                 "sell_price": {
@@ -1164,6 +1244,17 @@
                     "type": "number"
                 },
                 "warehouse_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.DeletePhotoRequest": {
+            "type": "object",
+            "required": [
+                "url"
+            ],
+            "properties": {
+                "url": {
                     "type": "string"
                 }
             }

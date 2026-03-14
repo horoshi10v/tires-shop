@@ -13,11 +13,12 @@ type Config struct {
 	HTTPServer          `yaml:"http_server"`
 	DB                  `yaml:"db"`
 	Auth                `yaml:"auth"`
+	Storage             `yaml:"storage"`
 	GoogleSpreadsheetID string `yaml:"google_spreadsheet_id" env:"GOOGLE_SPREADSHEET_ID"`
 }
 
 type HTTPServer struct {
-	Address string `yaml:"address" env:"HTTP_PORT" env-default:"8080"`
+	Address string `yaml:"address" env:"HTTP_PORT" env-default:"8083"`
 }
 
 type DB struct {
@@ -33,6 +34,15 @@ type Auth struct {
 	JWTSecret        string        `env:"JWT_SECRET" env-required:"true"`
 	TelegramBotToken string        `env:"TELEGRAM_BOT_TOKEN" env-required:"true"`
 	TokenTTL         time.Duration `env:"JWT_TTL" env-default:"72h"`
+}
+
+type Storage struct {
+	Endpoint   string `yaml:"endpoint" env:"MINIO_ENDPOINT" env-default:"localhost:9000"`
+	AccessKey  string `yaml:"access_key" env:"MINIO_ACCESS_KEY" env-required:"true"`
+	SecretKey  string `yaml:"secret_key" env:"MINIO_SECRET_KEY" env-required:"true"`
+	BucketName string `yaml:"bucket_name" env:"MINIO_BUCKET_NAME" env-default:"tires-shop"`
+	PublicURL  string `yaml:"public_url" env:"MINIO_PUBLIC_URL" env-default:"http://localhost:9000"`
+	UseSSL     bool   `yaml:"use_ssl" env:"MINIO_USE_SSL" env-default:"false"`
 }
 
 func MustLoad() *Config {

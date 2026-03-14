@@ -1,6 +1,18 @@
 version: '3.8'
 
 services:
+  minio:
+    image: minio/minio:latest
+    container_name: tires-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: admin_tires
+      MINIO_ROOT_PASSWORD: super_secret_password
+    volumes:
+      - ./.minio-data:/data
+    command: server /data --console-address ":9001"
   db:
     image: postgres:15-alpine
     container_name: tires_shop_db

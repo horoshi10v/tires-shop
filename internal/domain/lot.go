@@ -16,7 +16,6 @@ const (
 )
 
 // LotParams contains specific attributes for tires/rims.
-// Using a struct instead of map[string]interface{} provides strict type checking.
 type LotParams struct {
 	Width        int    `json:"width,omitempty"`
 	Profile      int    `json:"profile,omitempty"`
@@ -35,10 +34,10 @@ type CreateLotDTO struct {
 	Brand           string    `json:"brand" binding:"required"`
 	Model           string    `json:"model"`
 	Params          LotParams `json:"params"`
-	Defects         string    `json:"defects"` // Description of damages, if any
-	Photos          []string  `json:"photos"`  // URLs to images
+	Defects         string    `json:"defects"`
+	Photos          []string  `json:"photos"` // URLs to images
 	InitialQuantity int       `json:"initial_quantity" binding:"required,gt=0"`
-	PurchasePrice   float64   `json:"purchase_price" binding:"required,gt=0"` // Hidden from buyer
+	PurchasePrice   float64   `json:"purchase_price" binding:"required,gt=0"`
 	SellPrice       float64   `json:"sell_price" binding:"required,gt=0"`
 }
 
@@ -52,7 +51,6 @@ type LotFilter struct {
 }
 
 // LotPublicResponse is what the BUYER sees.
-// Note: PurchasePrice, InitialQuantity, and Warehouse details are hidden.
 type LotPublicResponse struct {
 	ID              uuid.UUID `json:"id"`
 	Type            string    `json:"type"`
@@ -67,7 +65,6 @@ type LotPublicResponse struct {
 }
 
 // LotInternalResponse is what ADMIN and STAFF see.
-// It embeds the public response and adds sensitive financial/warehouse data.
 type LotInternalResponse struct {
 	LotPublicResponse
 	WarehouseID   uuid.UUID `json:"warehouse_id"`

@@ -1,3 +1,4 @@
 .env
 .idea/
 /google-credentials.json
+.minio-data/

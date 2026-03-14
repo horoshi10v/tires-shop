@@ -25,7 +25,6 @@ definitions:
         - USED
         type: string
       defects:
-        description: Description of damages, if any
         type: string
       initial_quantity:
         type: integer
@@ -39,7 +38,6 @@ definitions:
           type: string
         type: array
       purchase_price:
-        description: Hidden from buyer
         type: number
       sell_price:
         type: number
@@ -289,7 +287,14 @@ definitions:
       warehouse_name:
         type: string
     type: object
-host: localhost:8080
+  v1.DeletePhotoRequest:
+    properties:
+      url:
+        type: string
+    required:
+    - url
+    type: object
+host: localhost:8083
 info:
   contact:
     name: Valentyn Khoroshylov
@@ -591,6 +596,58 @@ paths:
       summary: Get Lot QR Code
       tags:
       - lots-admin
+  /staff/lots/photo:
+    delete:
+      consumes:
+      - application/json
+      description: Removes the image from MinIO using its public URL.
+      parameters:
+      - description: Public URL of the photo to delete
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.DeletePhotoRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - RoleAuth: []
+      summary: Delete a photo
+      tags:
+      - media
+  /staff/lots/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Compresses the image to JPEG, uploads to MinIO, and returns the
+        public URL.
+      parameters:
+      - description: Image file to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns the public URL of the uploaded image
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - RoleAuth: []
+      summary: Upload a photo
+      tags:
+      - media
   /staff/orders:
     post:
       consumes:

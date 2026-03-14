@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/horoshi10v/tires-shop/internal/infrastructure/googlesheets"
 	"github.com/horoshi10v/tires-shop/internal/infrastructure/qrcode"
+	"github.com/horoshi10v/tires-shop/internal/infrastructure/storage"
 	"github.com/horoshi10v/tires-shop/internal/infrastructure/telegram"
 
 	swaggerFiles "github.com/swaggo/files"
@@ -29,7 +30,7 @@ import (
 // @version         1.0
 // @description     This is a REST API for managing a tires and rims store/warehouse.
 // @contact.name    Valentyn Khoroshylov
-// @host            localhost:8080
+// @host            localhost:8083
 // @BasePath        /api/v1
 // @securityDefinitions.apikey RoleAuth
 // @in              header
@@ -94,6 +95,20 @@ func main() {
 
 	qrGenerator := qrcode.NewQRGenerator()
 
+	minioStorage, err := storage.NewMinioStorage(
+		cfg.Storage.Endpoint,
+		cfg.Storage.AccessKey,
+		cfg.Storage.SecretKey,
+		cfg.Storage.BucketName,
+		cfg.Storage.PublicURL,
+		cfg.Storage.UseSSL,
+		log,
+	)
+	if err != nil {
+		log.Error("failed to init minio storage", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
 	googleExporter, err := googlesheets.NewGoogleExporter(
 		context.Background(),
 		"google-credentials.json",
@@ -112,6 +127,7 @@ func main() {
 	lotRepo := pg.NewLotRepository(db)
 	lotService := service.NewLotService(lotRepo, log, qrGenerator)
 	lotHandler := v1.NewLotHandler(lotService)
+	uploadHandler := v1.NewUploadHandler(minioStorage)
 
 	orderRepo := pg.NewOrderRepository(db)
 	orderService := service.NewOrderService(orderRepo, log, tgNotifier)
@@ -155,6 +171,8 @@ func main() {
 		staffAPI.POST("/transfers", transferHandler.Create)
 		staffAPI.POST("/transfers/:id/accept", transferHandler.Accept)
 		staffAPI.GET("/warehouses", warehouseHandler.List)
+		staffAPI.POST("/lots/upload", uploadHandler.UploadPhoto)
+		staffAPI.DELETE("/lots/photo", uploadHandler.DeletePhoto)
 	}
 
 	// Admin Routes

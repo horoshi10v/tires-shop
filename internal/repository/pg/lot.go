@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -192,9 +193,64 @@ func applyFilters(query *gorm.DB, filter domain.LotFilter) *gorm.DB {
 	if filter.Brand != "" {
 		query = query.Where("brand ILIKE ?", "%"+filter.Brand+"%")
 	}
+	if filter.Model != "" {
+		query = query.Where("model ILIKE ?", "%"+filter.Model+"%")
+	}
 	if filter.Type != "" {
 		query = query.Where("type = ?", filter.Type)
 	}
+	if filter.Condition != "" {
+		query = query.Where("condition = ?", filter.Condition)
+	}
+	if filter.CurrentQuantity != nil {
+		query = query.Where("current_quantity = ?", *filter.CurrentQuantity)
+	}
+	if filter.SellPrice != nil {
+		query = query.Where("sell_price = ?", *filter.SellPrice)
+	}
+
+	if filter.Search != "" {
+		searchTerm := "%" + filter.Search + "%"
+		query = query.Where("brand ILIKE ? OR model ILIKE ?", searchTerm, searchTerm)
+	}
+
+	// JSONB Filtering
+	if filter.Width > 0 {
+		query = query.Where("params->>'width' = ?", strconv.Itoa(filter.Width))
+	}
+	if filter.Profile > 0 {
+		query = query.Where("params->>'profile' = ?", strconv.Itoa(filter.Profile))
+	}
+	if filter.Diameter > 0 {
+		query = query.Where("params->>'diameter' = ?", strconv.Itoa(filter.Diameter))
+	}
+	if filter.Season != "" {
+		query = query.Where("params->>'season' = ?", filter.Season)
+	}
+
+	// Boolean JSONB Params
+	if filter.IsRunFlat != nil {
+		val := "false"
+		if *filter.IsRunFlat {
+			val = "true"
+		}
+		query = query.Where("params->>'is_run_flat' = ?", val)
+	}
+	if filter.IsSpiked != nil {
+		val := "false"
+		if *filter.IsSpiked {
+			val = "true"
+		}
+		query = query.Where("params->>'is_spiked' = ?", val)
+	}
+	if filter.AntiPuncture != nil {
+		val := "false"
+		if *filter.AntiPuncture {
+			val = "true"
+		}
+		query = query.Where("params->>'anti_puncture' = ?", val)
+	}
+
 	return query
 }
 

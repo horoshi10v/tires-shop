@@ -519,10 +519,62 @@ paths:
         in: query
         name: page_size
         type: integer
+      - description: Search by brand or model
+        in: query
+        name: search
+        type: string
       - description: Filter by brand name
         in: query
         name: brand
         type: string
+      - description: Filter by type (TIRE, RIM)
+        in: query
+        name: type
+        type: string
+      - description: Filter by width (mm)
+        in: query
+        name: width
+        type: integer
+      - description: Filter by profile (%)
+        in: query
+        name: profile
+        type: integer
+      - description: Filter by diameter (R)
+        in: query
+        name: diameter
+        type: integer
+      - description: Filter by season
+        in: query
+        name: season
+        type: string
+      - description: Filter by model name
+        in: query
+        name: model
+        type: string
+      - description: Filter by condition (NEW/USED)
+        in: query
+        name: condition
+        type: string
+      - description: Filter by run flat parameter
+        in: query
+        name: is_run_flat
+        type: boolean
+      - description: Filter by spiked parameter
+        in: query
+        name: is_spiked
+        type: boolean
+      - description: Filter by anti puncture parameter
+        in: query
+        name: anti_puncture
+        type: boolean
+      - description: Filter by exact sell price
+        in: query
+        name: sell_price
+        type: number
+      - description: Filter by exact quantity
+        in: query
+        name: current_quantity
+        type: integer
       produces:
       - application/json
       responses:
@@ -664,6 +716,10 @@ paths:
         in: query
         name: page_size
         type: integer
+      - description: Search by brand or model
+        in: query
+        name: search
+        type: string
       - description: Filter by brand name
         in: query
         name: brand
@@ -672,6 +728,54 @@ paths:
         in: query
         name: status
         type: string
+      - description: Filter by type (TIRE, RIM)
+        in: query
+        name: type
+        type: string
+      - description: Filter by width (mm)
+        in: query
+        name: width
+        type: integer
+      - description: Filter by profile (%)
+        in: query
+        name: profile
+        type: integer
+      - description: Filter by diameter (R)
+        in: query
+        name: diameter
+        type: integer
+      - description: Filter by season
+        in: query
+        name: season
+        type: string
+      - description: Filter by model name
+        in: query
+        name: model
+        type: string
+      - description: Filter by condition (NEW/USED)
+        in: query
+        name: condition
+        type: string
+      - description: Filter by run flat parameter
+        in: query
+        name: is_run_flat
+        type: boolean
+      - description: Filter by spiked parameter
+        in: query
+        name: is_spiked
+        type: boolean
+      - description: Filter by anti puncture parameter
+        in: query
+        name: anti_puncture
+        type: boolean
+      - description: Filter by exact sell price
+        in: query
+        name: sell_price
+        type: number
+      - description: Filter by exact quantity
+        in: query
+        name: current_quantity
+        type: integer
       produces:
       - application/json
       responses:

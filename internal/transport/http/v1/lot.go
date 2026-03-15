@@ -117,7 +117,20 @@ func (h *LotHandler) Delete(c *gin.Context) {
 //	@Produce      json
 //	@Param        page      query     int     false  "Page number" default(1)
 //	@Param        page_size query     int     false  "Items per page" default(10)
+//	@Param        search    query     string  false  "Search by brand or model"
 //	@Param        brand     query     string  false  "Filter by brand name"
+//	@Param        type      query     string  false  "Filter by type (TIRE, RIM)"
+//	@Param        width     query     int     false  "Filter by width (mm)"
+//	@Param        profile   query     int     false  "Filter by profile (%)"
+//	@Param        diameter  query     int     false  "Filter by diameter (R)"
+//	@Param        season    query     string  false  "Filter by season"
+//	@Param        model     query     string  false  "Filter by model name"
+//	@Param        condition query     string  false  "Filter by condition (NEW/USED)"
+//	@Param        is_run_flat      query     bool    false  "Filter by run flat parameter"
+//	@Param        is_spiked        query     bool    false  "Filter by spiked parameter"
+//	@Param        anti_puncture    query     bool    false  "Filter by anti puncture parameter"
+//	@Param        sell_price       query     number  false  "Filter by exact sell price"
+//	@Param        current_quantity query     int     false  "Filter by exact quantity"
 //	@Success      200       {array}   domain.LotPublicResponse
 //	@Router       /lots [get]
 func (h *LotHandler) ListPublic(c *gin.Context) {
@@ -147,8 +160,21 @@ func (h *LotHandler) ListPublic(c *gin.Context) {
 //	@Security     RoleAuth
 //	@Param        page      query     int     false  "Page number" default(1)
 //	@Param        page_size query     int     false  "Items per page" default(10)
+//	@Param        search    query     string  false  "Search by brand or model"
 //	@Param        brand     query     string  false  "Filter by brand name"
 //	@Param        status    query     string  false  "Filter by status"
+//	@Param        type      query     string  false  "Filter by type (TIRE, RIM)"
+//	@Param        width     query     int     false  "Filter by width (mm)"
+//	@Param        profile   query     int     false  "Filter by profile (%)"
+//	@Param        diameter  query     int     false  "Filter by diameter (R)"
+//	@Param        season    query     string  false  "Filter by season"
+//	@Param        model     query     string  false  "Filter by model name"
+//	@Param        condition query     string  false  "Filter by condition (NEW/USED)"
+//	@Param        is_run_flat      query     bool    false  "Filter by run flat parameter"
+//	@Param        is_spiked        query     bool    false  "Filter by spiked parameter"
+//	@Param        anti_puncture    query     bool    false  "Filter by anti puncture parameter"
+//	@Param        sell_price       query     number  false  "Filter by exact sell price"
+//	@Param        current_quantity query     int     false  "Filter by exact quantity"
 //	@Success      200       {array}   domain.LotInternalResponse
 //	@Router       /staff/lots [get]
 func (h *LotHandler) ListInternal(c *gin.Context) {
@@ -174,12 +200,58 @@ func buildLotFilter(c *gin.Context) domain.LotFilter {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
 
+	width, _ := strconv.Atoi(c.Query("width"))
+	profile, _ := strconv.Atoi(c.Query("profile"))
+	diameter, _ := strconv.Atoi(c.Query("diameter"))
+
+	var isRunFlat *bool
+	if val := c.Query("is_run_flat"); val != "" {
+		b, _ := strconv.ParseBool(val)
+		isRunFlat = &b
+	}
+
+	var isSpiked *bool
+	if val := c.Query("is_spiked"); val != "" {
+		b, _ := strconv.ParseBool(val)
+		isSpiked = &b
+	}
+
+	var antiPuncture *bool
+	if val := c.Query("anti_puncture"); val != "" {
+		b, _ := strconv.ParseBool(val)
+		antiPuncture = &b
+	}
+
+	var currentQuantity *int
+	if val := c.Query("current_quantity"); val != "" {
+		i, _ := strconv.Atoi(val)
+		currentQuantity = &i
+	}
+
+	var sellPrice *float64
+	if val := c.Query("sell_price"); val != "" {
+		f, _ := strconv.ParseFloat(val, 64)
+		sellPrice = &f
+	}
+
 	return domain.LotFilter{
-		Page:     page,
-		PageSize: pageSize,
-		Status:   c.Query("status"),
-		Brand:    c.Query("brand"),
-		Type:     c.Query("type"),
+		Page:            page,
+		PageSize:        pageSize,
+		Status:          c.Query("status"),
+		Brand:           c.Query("brand"),
+		Type:            c.Query("type"),
+		Search:          c.Query("search"),
+		Width:           width,
+		Profile:         profile,
+		Diameter:        diameter,
+		Season:          c.Query("season"),
+		Condition:       c.Query("condition"),
+		Model:           c.Query("model"),
+		IsRunFlat:       isRunFlat,
+		IsSpiked:        isSpiked,
+		AntiPuncture:    antiPuncture,
+		CurrentQuantity: currentQuantity,
+		SellPrice:       sellPrice,
 	}
 }
 

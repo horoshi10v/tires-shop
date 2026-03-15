@@ -62,6 +62,24 @@ type LotFilter struct {
 	Status   string
 	Brand    string
 	Type     string
+
+	// New Filters
+	Search   string // Multi-field search (Brand, Model)
+	Width    int
+	Profile  int
+	Diameter int
+	Season   string
+
+	// Boolean Params
+	IsRunFlat    *bool
+	IsSpiked     *bool
+	AntiPuncture *bool
+
+	// Other Fields
+	Condition       string
+	Model           string
+	CurrentQuantity *int
+	SellPrice       *float64
 }
 
 // LotPublicResponse is what the BUYER sees.

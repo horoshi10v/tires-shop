@@ -271,8 +271,86 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "description": "Search by brand or model",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "description": "Filter by brand name",
                         "name": "brand",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by type (TIRE, RIM)",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by width (mm)",
+                        "name": "width",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by profile (%)",
+                        "name": "profile",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by diameter (R)",
+                        "name": "diameter",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by season",
+                        "name": "season",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by model name",
+                        "name": "model",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by condition (NEW/USED)",
+                        "name": "condition",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by run flat parameter",
+                        "name": "is_run_flat",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by spiked parameter",
+                        "name": "is_spiked",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by anti puncture parameter",
+                        "name": "anti_puncture",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Filter by exact sell price",
+                        "name": "sell_price",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by exact quantity",
+                        "name": "current_quantity",
                         "in": "query"
                     }
                 ],
@@ -500,6 +578,12 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "description": "Search by brand or model",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "description": "Filter by brand name",
                         "name": "brand",
                         "in": "query"
@@ -508,6 +592,78 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Filter by status",
                         "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by type (TIRE, RIM)",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by width (mm)",
+                        "name": "width",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by profile (%)",
+                        "name": "profile",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by diameter (R)",
+                        "name": "diameter",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by season",
+                        "name": "season",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by model name",
+                        "name": "model",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by condition (NEW/USED)",
+                        "name": "condition",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by run flat parameter",
+                        "name": "is_run_flat",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by spiked parameter",
+                        "name": "is_spiked",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by anti puncture parameter",
+                        "name": "anti_puncture",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Filter by exact sell price",
+                        "name": "sell_price",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by exact quantity",
+                        "name": "current_quantity",
                         "in": "query"
                     }
                 ],

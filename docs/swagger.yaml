@@ -188,6 +188,36 @@ definitions:
     - lot_id
     - quantity
     type: object
+  domain.OrderItemResponse:
+    properties:
+      lot_id:
+        type: string
+      price:
+        type: number
+      quantity:
+        type: integer
+      total:
+        type: number
+    type: object
+  domain.OrderResponse:
+    properties:
+      created_at:
+        type: string
+      customer_name:
+        type: string
+      customer_phone:
+        type: string
+      id:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/domain.OrderItemResponse'
+        type: array
+      status:
+        type: string
+      total_amount:
+        type: number
+    type: object
   domain.PnLReport:
     properties:
       by_warehouse:
@@ -506,6 +536,43 @@ paths:
       tags:
       - lots-public
   /orders:
+    get:
+      description: Get a paginated list of orders placed by the current user.
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Filter by status
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.OrderResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - RoleAuth: []
+      summary: My Orders History
+      tags:
+      - orders
     post:
       consumes:
       - application/json
@@ -806,6 +873,48 @@ paths:
       summary: Upload a photo
       tags:
       - media
+  /staff/orders:
+    get:
+      description: Get a paginated list of orders, filterable by status or customer.
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Filter by status
+        in: query
+        name: status
+        type: string
+      - description: Search by customer name or phone
+        in: query
+        name: customer
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.OrderResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - RoleAuth: []
+      summary: List Orders
+      tags:
+      - orders-staff
   /staff/orders/{id}/status:
     put:
       consumes:

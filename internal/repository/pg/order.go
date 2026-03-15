@@ -23,7 +23,7 @@ func NewOrderRepository(db *gorm.DB) domain.OrderRepository {
 }
 
 // CreateOrderTx executes order creation and lot deduction atomically.
-func (r *OrderRepo) CreateOrderTx(ctx context.Context, dto domain.CreateOrderDTO) (uuid.UUID, error) {
+func (r *OrderRepo) CreateOrderTx(ctx context.Context, dto domain.CreateOrderDTO, userID *uuid.UUID) (uuid.UUID, error) {
 	var orderID uuid.UUID
 
 	// Start a database transaction
@@ -74,6 +74,7 @@ func (r *OrderRepo) CreateOrderTx(ctx context.Context, dto domain.CreateOrderDTO
 
 		// 6. Create the main Order record
 		order := models.Order{
+			UserID:        userID, // Link to user if provided
 			CustomerName:  dto.CustomerName,
 			CustomerPhone: dto.CustomerPhone,
 			Status:        "NEW",
@@ -103,8 +104,8 @@ func (r *OrderRepo) UpdateStatus(ctx context.Context, id uuid.UUID, newStatus st
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var order models.Order
 
-		// 1. Lock the order row to prevent race conditions during status change
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&order, "id = ?", id).Error; err != nil {
+		// 1. Lock the order row and Preload Items for potential restocking
+		if err := tx.Preload("Items").Clauses(clause.Locking{Strength: "UPDATE"}).First(&order, "id = ?", id).Error; err != nil {
 			return fmt.Errorf("order not found or locked: %w", err)
 		}
 
@@ -115,17 +116,43 @@ func (r *OrderRepo) UpdateStatus(ctx context.Context, id uuid.UUID, newStatus st
 			return nil
 		}
 
-		// 2. Update the order
+		// 2. Handle Stock Logic for Cancellations
+		if newStatus == "CANCELLED" && oldStatus != "CANCELLED" {
+			// Return items to stock
+			for _, item := range order.Items {
+				var lot models.Lot
+				if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&lot, "id = ?", item.LotID).Error; err != nil {
+					return fmt.Errorf("lot %s not found during restocking: %w", item.LotID, err)
+				}
+
+				lot.CurrentQuantity += item.Quantity
+				// Reactivate lot if it was archived due to 0 stock
+				if lot.CurrentQuantity > 0 && lot.Status == "ARCHIVED" {
+					lot.Status = "ACTIVE"
+				}
+
+				if err := tx.Save(&lot).Error; err != nil {
+					return fmt.Errorf("failed to restock lot %s: %w", lot.ID, err)
+				}
+			}
+		}
+
+		// Prevent re-opening a cancelled order for safety (simplified logic)
+		if oldStatus == "CANCELLED" && newStatus != "CANCELLED" {
+			return fmt.Errorf("cannot reopen a cancelled order directly, please create a new order")
+		}
+
+		// 3. Update the order
 		order.Status = newStatus
 		if err := tx.Save(&order).Error; err != nil {
 			return fmt.Errorf("failed to update order: %w", err)
 		}
 
-		// 3. Prepare old and new values for the Audit Log (as JSON)
+		// 4. Prepare old and new values for the Audit Log (as JSON)
 		oldVal, _ := json.Marshal(map[string]string{"status": oldStatus})
 		newVal, _ := json.Marshal(map[string]string{"status": newStatus})
 
-		// 4. Create the Audit Log record
+		// 5. Create the Audit Log record
 		auditLog := models.AuditLog{
 			Entity:   "ORDER",
 			EntityID: order.ID,
@@ -136,11 +163,106 @@ func (r *OrderRepo) UpdateStatus(ctx context.Context, id uuid.UUID, newStatus st
 			Comment:  comment,
 		}
 
-		// 5. Save the Audit Log
+		// 6. Save the Audit Log
 		if err := tx.Create(&auditLog).Error; err != nil {
 			return fmt.Errorf("failed to write audit log: %w", err)
 		}
 
 		return nil // Commit transaction
 	})
+}
+
+// List retrieves a paginated list of orders with filters.
+func (r *OrderRepo) List(ctx context.Context, filter domain.OrderFilter) ([]domain.OrderResponse, int64, error) {
+	var dbOrders []models.Order
+	var total int64
+
+	query := r.db.WithContext(ctx).Model(&models.Order{}).Preload("Items")
+
+	if filter.Status != "" {
+		query = query.Where("status = ?", filter.Status)
+	}
+	if filter.Customer != "" {
+		query = query.Where("customer_name ILIKE ? OR customer_phone ILIKE ?", "%"+filter.Customer+"%", "%"+filter.Customer+"%")
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to count orders: %w", err)
+	}
+
+	offset := (filter.Page - 1) * filter.PageSize
+	if err := query.Order("created_at DESC").Offset(offset).Limit(filter.PageSize).Find(&dbOrders).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to fetch orders: %w", err)
+	}
+
+	var responses []domain.OrderResponse
+	for _, order := range dbOrders {
+		var items []domain.OrderItemResponse
+		for _, item := range order.Items {
+			items = append(items, domain.OrderItemResponse{
+				LotID:    item.LotID,
+				Quantity: item.Quantity,
+				Price:    item.PriceAtMoment,
+				Total:    item.PriceAtMoment * float64(item.Quantity),
+			})
+		}
+
+		responses = append(responses, domain.OrderResponse{
+			ID:            order.ID,
+			CustomerName:  order.CustomerName,
+			CustomerPhone: order.CustomerPhone,
+			Status:        order.Status,
+			TotalAmount:   order.TotalAmount,
+			CreatedAt:     order.CreatedAt.Format("2006-01-02 15:04:05"),
+			Items:         items,
+		})
+	}
+
+	return responses, total, nil
+}
+
+// ListByUserID retrieves orders for a specific user.
+func (r *OrderRepo) ListByUserID(ctx context.Context, userID uuid.UUID, filter domain.OrderFilter) ([]domain.OrderResponse, int64, error) {
+	var dbOrders []models.Order
+	var total int64
+
+	query := r.db.WithContext(ctx).Model(&models.Order{}).Where("user_id = ?", userID).Preload("Items")
+
+	if filter.Status != "" {
+		query = query.Where("status = ?", filter.Status)
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to count user orders: %w", err)
+	}
+
+	offset := (filter.Page - 1) * filter.PageSize
+	if err := query.Order("created_at DESC").Offset(offset).Limit(filter.PageSize).Find(&dbOrders).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to fetch user orders: %w", err)
+	}
+
+	var responses []domain.OrderResponse
+	for _, order := range dbOrders {
+		var items []domain.OrderItemResponse
+		for _, item := range order.Items {
+			items = append(items, domain.OrderItemResponse{
+				LotID:    item.LotID,
+				Quantity: item.Quantity,
+				Price:    item.PriceAtMoment,
+				Total:    item.PriceAtMoment * float64(item.Quantity),
+			})
+		}
+
+		responses = append(responses, domain.OrderResponse{
+			ID:            order.ID,
+			CustomerName:  order.CustomerName,
+			CustomerPhone: order.CustomerPhone,
+			Status:        order.Status,
+			TotalAmount:   order.TotalAmount,
+			CreatedAt:     order.CreatedAt.Format("2006-01-02 15:04:05"),
+			Items:         items,
+		})
+	}
+
+	return responses, total, nil
 }

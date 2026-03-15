@@ -7,10 +7,11 @@ import (
 // Order represents the main order document in the database.
 type Order struct {
 	Base
-	CustomerName  string  `gorm:"type:varchar(100)"`
-	CustomerPhone string  `gorm:"type:varchar(20);index"`
-	Status        string  `gorm:"type:varchar(20);default:'NEW';index"` // NEW, PREPAYMENT, DONE
-	TotalAmount   float64 `gorm:"not null"`
+	UserID        *uuid.UUID `gorm:"type:uuid;index"` // Nullable for guest orders, but currently all are auth'd
+	CustomerName  string     `gorm:"type:varchar(100)"`
+	CustomerPhone string     `gorm:"type:varchar(20);index"`
+	Status        string     `gorm:"type:varchar(20);default:'NEW';index"` // NEW, PREPAYMENT, DONE, CANCELLED
+	TotalAmount   float64    `gorm:"not null"`
 
 	// Has-Many relationship
 	Items []OrderItem `gorm:"foreignKey:OrderID"`

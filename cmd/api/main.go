@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/horoshi10v/tires-shop/internal/infrastructure/googlesheets"
 	"github.com/horoshi10v/tires-shop/internal/infrastructure/qrcode"
@@ -151,6 +152,14 @@ func main() {
 	// Router Setup
 	router := gin.Default()
 
+	// CORS Configuration
+	corsConfig := cors.DefaultConfig()
+	corsConfig.AllowAllOrigins = true
+	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
+	corsConfig.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization"}
+	corsConfig.ExposeHeaders = []string{"X-Total-Count"}
+	router.Use(cors.New(corsConfig))
+
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	publicAPI := router.Group("/api/v1")
@@ -163,6 +172,7 @@ func main() {
 	clientAPI.Use(middleware.RequireRole(cfg.Auth.JWTSecret, "BUYER", "STAFF", "ADMIN"))
 	{
 		clientAPI.POST("/orders", orderHandler.Create)
+		clientAPI.GET("/orders", orderHandler.ListMyOrders)
 	}
 
 	// Staff Routes
@@ -174,7 +184,8 @@ func main() {
 		staffAPI.PUT("/lots/:id", lotHandler.Update)
 		staffAPI.DELETE("/lots/:id", lotHandler.Delete)
 		staffAPI.GET("/lots/:id/qr", lotHandler.GetQR)
-		staffAPI.PATCH("/orders/:id/status", orderHandler.UpdateStatus)
+		staffAPI.GET("/orders", orderHandler.List)
+		staffAPI.PUT("/orders/:id/status", orderHandler.UpdateStatus)
 		staffAPI.POST("/transfers", transferHandler.Create)
 		staffAPI.POST("/transfers/:id/accept", transferHandler.Accept)
 		staffAPI.GET("/warehouses", warehouseHandler.List)

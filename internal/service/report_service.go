@@ -17,7 +17,7 @@ func NewReportService(repo domain.ReportRepository, logger *slog.Logger) domain.
 }
 
 // GetPnLReport fetches the financial analytics.
-func (s *reportService) GetPnLReport(ctx context.Context) (*domain.PnLReport, error) {
+func (s *reportService) GetPnLReport(ctx context.Context, filter domain.ReportFilter) (*domain.PnLReport, error) {
 	s.logger.Info("generating P&L report")
-	return s.repo.GetPnL(ctx)
+	return s.repo.GetPnL(ctx, filter)
 }

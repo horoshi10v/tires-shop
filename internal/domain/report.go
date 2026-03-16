@@ -1,6 +1,11 @@
 package domain
 
-import "context"
+import (
+	"context"
+	"time"
+
+	"github.com/google/uuid"
+)
 
 // PnLReport represents the Profit and Loss financial data.
 type PnLReport struct {
@@ -11,14 +16,21 @@ type PnLReport struct {
 	ByWarehouse    []WarehousePnL `json:"by_warehouse"`
 }
 
+// ReportFilter defines criteria for filtering reports.
+type ReportFilter struct {
+	StartDate   *time.Time
+	EndDate     *time.Time
+	WarehouseID *uuid.UUID
+}
+
 // ReportRepository handles analytical database queries.
 type ReportRepository interface {
-	GetPnL(ctx context.Context) (*PnLReport, error)
+	GetPnL(ctx context.Context, filter ReportFilter) (*PnLReport, error)
 }
 
 // ReportService handles business logic for reports.
 type ReportService interface {
-	GetPnLReport(ctx context.Context) (*PnLReport, error)
+	GetPnLReport(ctx context.Context, filter ReportFilter) (*PnLReport, error)
 }
 
 // WarehousePnL содержит финансы по одному конкретному складу

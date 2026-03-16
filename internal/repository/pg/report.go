@@ -18,7 +18,7 @@ func NewReportRepository(db *gorm.DB) domain.ReportRepository {
 
 // GetPnL executes a raw SQL query to calculate financials.
 // This demonstrates ability to write complex analytical queries manually.
-func (r *ReportRepo) GetPnL(ctx context.Context) (*domain.PnLReport, error) {
+func (r *ReportRepo) GetPnL(ctx context.Context, filter domain.ReportFilter) (*domain.PnLReport, error) {
 	query := `
 		SELECT 
 			w.name as warehouse_name,
@@ -31,17 +31,41 @@ func (r *ReportRepo) GetPnL(ctx context.Context) (*domain.PnLReport, error) {
 		JOIN lots l ON oi.lot_id = l.id
 		JOIN warehouses w ON l.warehouse_id = w.id
 		WHERE o.status = 'DONE' AND o.deleted_at IS NULL
+	`
+
+	var args []interface{}
+
+	if filter.StartDate != nil {
+		query += " AND o.created_at >= ?"
+		args = append(args, *filter.StartDate)
+	}
+
+	if filter.EndDate != nil {
+		query += " AND o.created_at <= ?"
+		args = append(args, *filter.EndDate)
+	}
+
+	if filter.WarehouseID != nil {
+		query += " AND w.id = ?"
+		args = append(args, *filter.WarehouseID)
+	}
+
+	query += `
 		GROUP BY w.id, w.name
 		ORDER BY w.name
 	`
 
 	var warehousePnLs []domain.WarehousePnL
-	if err := r.db.WithContext(ctx).Raw(query).Scan(&warehousePnLs).Error; err != nil {
+	if err := r.db.WithContext(ctx).Raw(query, args...).Scan(&warehousePnLs).Error; err != nil {
 		return nil, err
 	}
 
 	report := &domain.PnLReport{
-		ByWarehouse: warehousePnLs,
+		ByWarehouse:    warehousePnLs,
+		TotalItemsSold: 0,
+		TotalRevenue:   0,
+		TotalCOGS:      0,
+		TotalProfit:    0,
 	}
 
 	for _, wpnl := range warehousePnLs {

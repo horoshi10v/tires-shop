@@ -46,3 +46,36 @@ func (s *transferService) AcceptTransfer(ctx context.Context, transferID uuid.UU
 
 	return nil
 }
+
+func (s *transferService) CancelTransfer(ctx context.Context, transferID uuid.UUID, userID uuid.UUID) error {
+	s.logger.Info("cancelling warehouse transfer", slog.String("transfer_id", transferID.String()))
+
+	if err := s.repo.CancelTx(ctx, transferID, userID); err != nil {
+		s.logger.Error("failed to cancel transfer", slog.String("error", err.Error()))
+		return err
+	}
+	msg := fmt.Sprintf("❌ Переміщення СКАСОВАНО!\nID: %s\nТовари повернуто на склад відправник.", transferID)
+	s.notifier.SendAlert(msg)
+
+	return nil
+}
+
+func (s *transferService) ListTransfers(ctx context.Context, filter domain.TransferFilter) ([]domain.TransferResponse, int64, error) {
+	if filter.Page <= 0 {
+		filter.Page = 1
+	}
+	if filter.PageSize <= 0 {
+		filter.PageSize = 10
+	}
+	if filter.PageSize > 100 {
+		filter.PageSize = 100
+	}
+
+	s.logger.Debug("fetching transfers list", slog.Int("page", filter.Page))
+	return s.repo.List(ctx, filter)
+}
+
+func (s *transferService) GetTransfer(ctx context.Context, id uuid.UUID) (*domain.TransferResponse, error) {
+	s.logger.Debug("fishing transfer details", slog.String("id", id.String()))
+	return s.repo.GetByID(ctx, id)
+}

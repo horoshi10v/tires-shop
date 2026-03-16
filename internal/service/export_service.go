@@ -24,30 +24,42 @@ func NewExportService(lotRepo domain.LotRepository, reportRepo domain.ReportRepo
 	}
 }
 
-func (s *exportService) ExportInventory(ctx context.Context) (string, error) {
+func (s *exportService) ExportInventory(ctx context.Context, filter domain.LotFilter) (string, error) {
 	s.logger.Info("generating google sheets inventory export")
 
-	filter := domain.LotFilter{Page: 1, PageSize: 10000}
+	// Ensure we get all relevant records for the report, but respect filters
+	if filter.PageSize == 0 {
+		filter.PageSize = 10000 // Large limit for export
+	}
+	if filter.Page == 0 {
+		filter.Page = 1
+	}
+
 	lots, _, err := s.lotRepo.ListInternal(ctx, filter)
 	if err != nil {
 		s.logger.Error("failed to fetch lots for export", slog.String("error", err.Error()))
 		return "", err
 	}
 
-	var inStockLots []domain.LotInternalResponse
+	// Filter in-stock lots if not already filtered
+	var exportLots []domain.LotInternalResponse
 	for _, lot := range lots {
-		if lot.CurrentQuantity > 0 && lot.Status == "ACTIVE" {
-			inStockLots = append(inStockLots, lot)
+		// Exports usually only care about active stock, unless status filter overrides
+		if lot.Status == "ACTIVE" {
+			exportLots = append(exportLots, lot)
+		} else if filter.Status != "" && lot.Status == filter.Status {
+			// If user explicitly asked for ARCHIVED, include them
+			exportLots = append(exportLots, lot)
 		}
 	}
 
-	return s.exporter.GenerateInventoryReport(ctx, inStockLots)
+	return s.exporter.GenerateInventoryReport(ctx, exportLots)
 }
 
-func (s *exportService) ExportPnL(ctx context.Context) (string, error) {
+func (s *exportService) ExportPnL(ctx context.Context, filter domain.ReportFilter) (string, error) {
 	s.logger.Info("generating google sheets pnl export")
 
-	pnl, err := s.reportRepo.GetPnL(ctx)
+	pnl, err := s.reportRepo.GetPnL(ctx, filter)
 	if err != nil {
 		s.logger.Error("failed to fetch pnl for export", slog.String("error", err.Error()))
 		return "", err

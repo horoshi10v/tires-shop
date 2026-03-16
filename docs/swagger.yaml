@@ -243,6 +243,38 @@ definitions:
     - lot_id
     - quantity
     type: object
+  domain.TransferItemResponse:
+    properties:
+      id:
+        type: string
+      quantity:
+        type: integer
+      source_lot_id:
+        type: string
+    type: object
+  domain.TransferResponse:
+    properties:
+      accepted_by:
+        type: string
+      comment:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      from_warehouse_id:
+        type: string
+      id:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/domain.TransferItemResponse'
+        type: array
+      status:
+        type: string
+      to_warehouse_id:
+        type: string
+    type: object
   domain.UpdateLotDTO:
     properties:
       brand:
@@ -366,6 +398,19 @@ info:
 paths:
   /admin/exports/inventory:
     get:
+      parameters:
+      - description: Search by brand or model
+        in: query
+        name: search
+        type: string
+      - description: Filter by brand name
+        in: query
+        name: brand
+        type: string
+      - description: Filter by type (TIRE, RIM)
+        in: query
+        name: type
+        type: string
       produces:
       - application/json
       responses:
@@ -382,6 +427,19 @@ paths:
       - exports
   /admin/exports/pnl:
     get:
+      parameters:
+      - description: Start Date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        type: string
+      - description: End Date (YYYY-MM-DD)
+        in: query
+        name: end_date
+        type: string
+      - description: Filter by Warehouse ID
+        in: query
+        name: warehouse_id
+        type: string
       produces:
       - application/json
       responses:
@@ -678,6 +736,19 @@ paths:
       consumes:
       - application/json
       description: Calculates total revenue, COGS, and profit based on DONE orders.
+      parameters:
+      - description: Start Date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        type: string
+      - description: End Date (YYYY-MM-DD)
+        in: query
+        name: end_date
+        type: string
+      - description: Filter by Warehouse ID
+        in: query
+        name: warehouse_id
+        type: string
       produces:
       - application/json
       responses:
@@ -1076,6 +1147,45 @@ paths:
       tags:
       - orders
   /staff/transfers:
+    get:
+      description: Get paginated list of transfers.
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: page_size
+        type: integer
+      - description: Filter by status
+        in: query
+        name: status
+        type: string
+      - description: Filter by source warehouse
+        in: query
+        name: from_warehouse_id
+        type: string
+      - description: Filter by destination warehouse
+        in: query
+        name: to_warehouse_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.TransferResponse'
+            type: array
+      security:
+      - RoleAuth: []
+      summary: List Transfers
+      tags:
+      - transfers
     post:
       consumes:
       - application/json
@@ -1100,6 +1210,27 @@ paths:
       summary: Create Transfer
       tags:
       - transfers
+  /staff/transfers/{id}:
+    get:
+      description: Get transfer by ID.
+      parameters:
+      - description: Transfer ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.TransferResponse'
+      security:
+      - RoleAuth: []
+      summary: Get Transfer Details
+      tags:
+      - transfers
   /staff/transfers/{id}/accept:
     post:
       description: 'Receives the stock at the destination warehouse (Status: ACCEPTED).'
@@ -1121,6 +1252,29 @@ paths:
       security:
       - RoleAuth: []
       summary: Accept Transfer
+      tags:
+      - transfers
+  /staff/transfers/{id}/cancel:
+    post:
+      description: Cancels an IN_TRANSIT transfer and refunds stock.
+      parameters:
+      - description: Transfer ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - RoleAuth: []
+      summary: Cancel Transfer
       tags:
       - transfers
   /staff/warehouses:

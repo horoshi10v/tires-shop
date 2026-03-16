@@ -185,16 +185,19 @@ func main() {
 		staffAPI.DELETE("/lots/:id", lotHandler.Delete)
 		staffAPI.GET("/lots/:id/qr", lotHandler.GetQR)
 		staffAPI.GET("/orders", orderHandler.List)
-		staffAPI.PUT("/orders/:id/status", orderHandler.UpdateStatus)
+		staffAPI.PATCH("/orders/:id/status", orderHandler.UpdateStatus)
+		staffAPI.GET("/transfers", transferHandler.List)
+		staffAPI.GET("/transfers/:id", transferHandler.GetByID)
 		staffAPI.POST("/transfers", transferHandler.Create)
 		staffAPI.POST("/transfers/:id/accept", transferHandler.Accept)
+		staffAPI.POST("/transfers/:id/cancel", transferHandler.Cancel)
 		staffAPI.GET("/warehouses", warehouseHandler.List)
 		staffAPI.POST("/lots/upload", uploadHandler.UploadPhoto)
 		staffAPI.DELETE("/lots/photo", uploadHandler.DeletePhoto)
 	}
 
 	// Admin Routes
-	adminAPI := router.Group("/api/v1")
+	adminAPI := router.Group("/api/v1/admin")
 	adminAPI.Use(middleware.RequireRole(cfg.Auth.JWTSecret, "ADMIN"))
 	{
 		adminAPI.GET("/reports/pnl", reportHandler.GetPnL)

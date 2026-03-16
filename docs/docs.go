@@ -31,6 +31,26 @@ const docTemplate = `{
                     "exports"
                 ],
                 "summary": "Export Inventory to Google Sheets",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search by brand or model",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by brand name",
+                        "name": "brand",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by type (TIRE, RIM)",
+                        "name": "type",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "URL of the Google Sheet",
@@ -58,6 +78,26 @@ const docTemplate = `{
                     "exports"
                 ],
                 "summary": "Export P\u0026L to Google Sheets",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start Date (YYYY-MM-DD)",
+                        "name": "start_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End Date (YYYY-MM-DD)",
+                        "name": "end_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by Warehouse ID",
+                        "name": "warehouse_id",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "URL of the Google Sheet",
@@ -518,6 +558,26 @@ const docTemplate = `{
                     "reports"
                 ],
                 "summary": "Get Profit \u0026 Loss Report",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start Date (YYYY-MM-DD)",
+                        "name": "start_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End Date (YYYY-MM-DD)",
+                        "name": "end_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by Warehouse ID",
+                        "name": "warehouse_id",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1123,6 +1183,66 @@ const docTemplate = `{
             }
         },
         "/staff/transfers": {
+            "get": {
+                "security": [
+                    {
+                        "RoleAuth": []
+                    }
+                ],
+                "description": "Get paginated list of transfers.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transfers"
+                ],
+                "summary": "List Transfers",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Items per page",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by source warehouse",
+                        "name": "from_warehouse_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by destination warehouse",
+                        "name": "to_warehouse_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.TransferResponse"
+                            }
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -1162,6 +1282,40 @@ const docTemplate = `{
                 }
             }
         },
+        "/staff/transfers/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "RoleAuth": []
+                    }
+                ],
+                "description": "Get transfer by ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transfers"
+                ],
+                "summary": "Get Transfer Details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Transfer ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.TransferResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/staff/transfers/{id}/accept": {
             "post": {
                 "security": [
@@ -1177,6 +1331,43 @@ const docTemplate = `{
                     "transfers"
                 ],
                 "summary": "Accept Transfer",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Transfer ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/staff/transfers/{id}/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "RoleAuth": []
+                    }
+                ],
+                "description": "Cancels an IN_TRANSIT transfer and refunds stock.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transfers"
+                ],
+                "summary": "Cancel Transfer",
                 "parameters": [
                     {
                         "type": "string",
@@ -1586,6 +1777,55 @@ const docTemplate = `{
                 },
                 "quantity": {
                     "type": "integer"
+                }
+            }
+        },
+        "domain.TransferItemResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "source_lot_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.TransferResponse": {
+            "type": "object",
+            "properties": {
+                "accepted_by": {
+                    "type": "string"
+                },
+                "comment": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "from_warehouse_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.TransferItemResponse"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "to_warehouse_id": {
+                    "type": "string"
                 }
             }
         },

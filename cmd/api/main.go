@@ -124,6 +124,8 @@ func main() {
 	userRepo := pg.NewUserRepository(db)
 	authService := service.NewAuthService(userRepo, cfg, log)
 	authHandler := v1.NewAuthHandler(authService)
+	userService := service.NewUserService(userRepo, log) // Added
+	userHandler := v1.NewUserHandler(userService)        // Added
 
 	lotRepo := pg.NewLotRepository(db)
 	lotService := service.NewLotService(lotRepo, log, qrGenerator)
@@ -206,6 +208,12 @@ func main() {
 		adminAPI.DELETE("/warehouses/:id", warehouseHandler.Delete)
 		adminAPI.GET("/exports/inventory", exportHandler.ExportInventory)
 		adminAPI.GET("/exports/pnl", exportHandler.ExportPnL)
+
+		// User Management Routes
+		adminAPI.GET("/users", userHandler.ListUsers)
+		adminAPI.POST("/users", userHandler.AddWorker)
+		adminAPI.PUT("/users/:id/role", userHandler.UpdateRole)
+		adminAPI.DELETE("/users/:id", userHandler.Delete)
 	}
 
 	router.GET("/health", func(c *gin.Context) {

@@ -111,6 +111,195 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/users": {
+            "get": {
+                "security": [
+                    {
+                        "RoleAuth": []
+                    }
+                ],
+                "description": "Get all users with optional filtering.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users-admin"
+                ],
+                "summary": "List Users",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by username, phone, name",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by role (BUYER, STAFF, ADMIN)",
+                        "name": "role",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.User"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "RoleAuth": []
+                    }
+                ],
+                "description": "Create new worker by Telegram ID or promote existing user by Username/Phone.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users-admin"
+                ],
+                "summary": "Add Worker",
+                "parameters": [
+                    {
+                        "description": "Worker details",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.CreateWorkerDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "RoleAuth": []
+                    }
+                ],
+                "description": "Soft delete a user account.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users-admin"
+                ],
+                "summary": "Delete User",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/{id}/role": {
+            "put": {
+                "security": [
+                    {
+                        "RoleAuth": []
+                    }
+                ],
+                "description": "Promote or demote a user (e.g. BUYER -\u003e STAFF).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users-admin"
+                ],
+                "summary": "Update User Role",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New Role",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.UpdateUserRoleDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/admin/warehouses": {
             "post": {
                 "security": [
@@ -1566,6 +1755,38 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.CreateWorkerDTO": {
+            "type": "object",
+            "required": [
+                "role"
+            ],
+            "properties": {
+                "first_name": {
+                    "type": "string"
+                },
+                "phone_number": {
+                    "type": "string"
+                },
+                "role": {
+                    "enum": [
+                        "STAFF",
+                        "ADMIN"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.UserRole"
+                        }
+                    ]
+                },
+                "telegram_id": {
+                    "description": "Optional if searching by other fields",
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.LotInternalResponse": {
             "type": "object",
             "properties": {
@@ -1896,6 +2117,26 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.UpdateUserRoleDTO": {
+            "type": "object",
+            "required": [
+                "role"
+            ],
+            "properties": {
+                "role": {
+                    "enum": [
+                        "BUYER",
+                        "STAFF",
+                        "ADMIN"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.UserRole"
+                        }
+                    ]
+                }
+            }
+        },
         "domain.UpdateWarehouseDTO": {
             "type": "object",
             "required": [
@@ -1922,6 +2163,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
+                    "type": "string"
+                },
+                "phone_number": {
                     "type": "string"
                 },
                 "role": {

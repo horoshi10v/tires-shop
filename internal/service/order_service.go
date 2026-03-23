@@ -11,10 +11,11 @@ import (
 )
 
 type orderService struct {
-	repo      domain.OrderRepository
-	logger    *slog.Logger
-	notifier  telegram.Notifier
-	botSender telegram.Sender
+	repo               domain.OrderRepository
+	logger             *slog.Logger
+	notifier           telegram.Notifier
+	botSender          telegram.Sender
+	adminNotifications domain.AdminNotificationService
 }
 
 func NewOrderService(
@@ -22,12 +23,14 @@ func NewOrderService(
 	logger *slog.Logger,
 	notifier telegram.Notifier,
 	botSender telegram.Sender,
+	adminNotifications domain.AdminNotificationService,
 ) domain.OrderService {
 	return &orderService{
-		repo:      repo,
-		logger:    logger,
-		notifier:  notifier,
-		botSender: botSender,
+		repo:               repo,
+		logger:             logger,
+		notifier:           notifier,
+		botSender:          botSender,
+		adminNotifications: adminNotifications,
 	}
 }
 
@@ -45,6 +48,15 @@ func (s *orderService) CreateOrder(ctx context.Context, dto domain.CreateOrderDT
 	// Send a Telegram notification about the new order. This is done asynchronously to avoid blocking the main flow.
 	msg := fmt.Sprintf("📦 Нове замовлення від %s!\nID: %s", dto.CustomerName, orderID.String())
 	s.notifier.SendAlert(msg)
+
+	if s.adminNotifications != nil {
+		order, fetchErr := s.repo.GetByID(ctx, orderID)
+		if fetchErr != nil {
+			s.logger.Warn("failed to fetch order for admin notifications", slog.String("order_id", orderID.String()), slog.String("error", fetchErr.Error()))
+		} else if notifyErr := s.adminNotifications.NotifyNewOrder(ctx, order); notifyErr != nil {
+			s.logger.Warn("failed to send new-order admin notifications", slog.String("order_id", orderID.String()), slog.String("error", notifyErr.Error()))
+		}
+	}
 
 	return orderID, nil
 }
@@ -71,7 +83,7 @@ func (s *orderService) SendOrderMessage(ctx context.Context, id uuid.UUID, messa
 		return fmt.Errorf("order does not have customer_telegram_id")
 	}
 
-	telegramMessageID, err := s.botSender.SendMessage(*order.CustomerTelegramID, message)
+	telegramMessageID, err := s.botSender.SendReplyableMessage(*order.CustomerTelegramID, message)
 	if err != nil {
 		return err
 	}
@@ -111,7 +123,22 @@ func (s *orderService) ProcessInboundMessage(ctx context.Context, dto domain.Inb
 		TelegramMessageID:        dto.TelegramMessageID,
 		ReplyToTelegramMessageID: dto.ReplyToTelegramMessageID,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+
+	if s.adminNotifications != nil {
+		order, fetchErr := s.repo.GetByID(ctx, parentMessage.OrderID)
+		if fetchErr != nil {
+			s.logger.Warn("failed to fetch order for inbound admin notifications", slog.String("order_id", parentMessage.OrderID.String()), slog.String("error", fetchErr.Error()))
+			return nil
+		}
+		if notifyErr := s.adminNotifications.NotifyCustomerMessage(ctx, order, dto.MessageText); notifyErr != nil {
+			s.logger.Warn("failed to send inbound-message admin notifications", slog.String("order_id", parentMessage.OrderID.String()), slog.String("error", notifyErr.Error()))
+		}
+	}
+
+	return nil
 }
 
 func (s *orderService) GetOrderByID(ctx context.Context, id uuid.UUID) (*domain.OrderResponse, error) {

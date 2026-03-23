@@ -18,6 +18,8 @@ type Notifier interface {
 
 type Sender interface {
 	SendMessage(chatID int64, message string) (int64, error)
+	SendReplyableMessage(chatID int64, message string) (int64, error)
+	SendHTMLMessage(chatID int64, message string) (int64, error)
 }
 
 type botNotifier struct {
@@ -59,6 +61,18 @@ func (b *botNotifier) SendAlert(message string) {
 }
 
 func (b *botNotifier) SendMessage(chatID int64, message string) (int64, error) {
+	return b.sendMessage(chatID, message, false, "")
+}
+
+func (b *botNotifier) SendReplyableMessage(chatID int64, message string) (int64, error) {
+	return b.sendMessage(chatID, message, true, "")
+}
+
+func (b *botNotifier) SendHTMLMessage(chatID int64, message string) (int64, error) {
+	return b.sendMessage(chatID, message, false, "HTML")
+}
+
+func (b *botNotifier) sendMessage(chatID int64, message string, forceReply bool, parseMode string) (int64, error) {
 	if chatID == 0 {
 		return 0, fmt.Errorf("telegram chat id is required")
 	}
@@ -73,7 +87,14 @@ func (b *botNotifier) SendMessage(chatID int64, message string) (int64, error) {
 	form := url.Values{}
 	form.Set("chat_id", fmt.Sprintf("%d", chatID))
 	form.Set("text", message)
-	form.Set("reply_markup", `{"force_reply":true,"input_field_placeholder":"Відповісти на повідомлення"}`)
+	if parseMode != "" {
+		form.Set("parse_mode", parseMode)
+	}
+	if forceReply {
+		form.Set("reply_markup", `{"force_reply":true,"input_field_placeholder":"Відповісти на повідомлення"}`)
+	} else if parseMode == "HTML" {
+		form.Set("disable_web_page_preview", "true")
+	}
 
 	resp, err := b.client.PostForm(endpoint, form)
 	if err != nil {

@@ -26,8 +26,8 @@ type AuditLogResponse struct {
 	UserID    uuid.UUID       `json:"user_id"`
 	UserLabel string          `json:"user_label"`
 	Comment   string          `json:"comment"`
-	OldValue  json.RawMessage `json:"old_value,omitempty"`
-	NewValue  json.RawMessage `json:"new_value,omitempty"`
+	OldValue  json.RawMessage `json:"old_value,omitempty" swaggertype:"string"`
+	NewValue  json.RawMessage `json:"new_value,omitempty" swaggertype:"string"`
 	CreatedAt string          `json:"created_at"`
 }
 

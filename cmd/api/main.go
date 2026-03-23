@@ -64,6 +64,7 @@ func main() {
 		&models.Order{},
 		&models.OrderItem{},
 		&models.OrderMessage{},
+		&models.AdminNotification{},
 		&models.AuditLog{},
 		&models.User{},
 		&models.Transfer{},
@@ -95,6 +96,7 @@ func main() {
 	tgNotifier := telegram.NewNotifier(log, cfg.Auth.TelegramBotToken)
 	tgNotifier.Start(context.Background())
 	clientBotSender := telegram.NewSender(log, cfg.Auth.ClientTelegramBotToken)
+	adminBotSender := telegram.NewSender(log, cfg.Auth.TelegramBotToken)
 
 	if err := telegram.EnsureWebhook(cfg.Auth.ClientTelegramBotToken, cfg.Telegram.ClientBotWebhookURL); err != nil {
 		log.Error("failed to ensure client bot webhook", slog.String("error", err.Error()))
@@ -143,8 +145,11 @@ func main() {
 	uploadHandler := v1.NewUploadHandler(minioStorage)
 
 	orderRepo := pg.NewOrderRepository(db)
-	orderService := service.NewOrderService(orderRepo, log, tgNotifier, clientBotSender)
+	adminNotificationRepo := pg.NewAdminNotificationRepository(db)
+	adminNotificationService := service.NewAdminNotificationService(adminNotificationRepo, userRepo, adminBotSender, log)
+	orderService := service.NewOrderService(orderRepo, log, tgNotifier, clientBotSender, adminNotificationService)
 	orderHandler := v1.NewOrderHandler(orderService)
+	adminNotificationHandler := v1.NewAdminNotificationHandler(adminNotificationService)
 
 	reportRepo := pg.NewReportRepository(db)
 	reportService := service.NewReportService(reportRepo, log)
@@ -226,6 +231,8 @@ func main() {
 		adminAPI.GET("/exports/inventory", exportHandler.ExportInventory)
 		adminAPI.GET("/exports/pnl", exportHandler.ExportPnL)
 		adminAPI.GET("/audit-logs", auditHandler.ListAuditLogs)
+		adminAPI.GET("/notifications", adminNotificationHandler.List)
+		adminAPI.POST("/notifications/:id/read", adminNotificationHandler.MarkRead)
 
 		// User Management Routes
 		adminAPI.GET("/users", userHandler.ListUsers)

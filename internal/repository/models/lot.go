@@ -10,8 +10,9 @@ type LotType string
 type LotCondition string
 
 const (
-	LotTypeTire LotType = "TIRE"
-	LotTypeRim  LotType = "RIM"
+	LotTypeTire      LotType = "TIRE"
+	LotTypeRim       LotType = "RIM"
+	LotTypeAccessory LotType = "ACCESSORY"
 
 	ConditionNew  LotCondition = "NEW"
 	ConditionUsed LotCondition = "USED"
@@ -23,7 +24,7 @@ type Lot struct {
 	WarehouseID uuid.UUID `gorm:"type:uuid;not null;index"` // Where this lot is stored
 
 	// Attributes
-	Type      LotType      `gorm:"type:varchar(20);not null"` // TIRE or RIM
+	Type      LotType      `gorm:"type:varchar(20);not null"` // TIRE, RIM or ACCESSORY
 	Condition LotCondition `gorm:"type:varchar(20);not null"` // NEW or USED
 	Brand     string       `gorm:"type:varchar(100);not null;index"`
 	Model     string       `gorm:"type:varchar(100)"`

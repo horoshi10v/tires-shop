@@ -17,19 +17,28 @@ const (
 
 // LotParams contains specific attributes for tires/rims.
 type LotParams struct {
-	Width        int    `json:"width,omitempty"`
-	Profile      int    `json:"profile,omitempty"`
-	Diameter     int    `json:"diameter,omitempty"`
-	Season       string `json:"season,omitempty"` // SUMMER, WINTER, ALL_SEASON
-	IsRunFlat    bool   `json:"is_run_flat"`
-	IsSpiked     bool   `json:"is_spiked"`
-	AntiPuncture bool   `json:"anti_puncture"`
+	Width             int    `json:"width,omitempty"`
+	Profile           int    `json:"profile,omitempty"`
+	Diameter          int    `json:"diameter,omitempty"`
+	Season            string `json:"season,omitempty"` // SUMMER, WINTER, ALL_SEASON
+	IsRunFlat         bool   `json:"is_run_flat"`
+	IsSpiked          bool   `json:"is_spiked"`
+	AntiPuncture      bool   `json:"anti_puncture"`
+	AccessoryCategory string `json:"accessory_category,omitempty"` // FASTENERS, HUB_RINGS, SPACERS, TIRE_BAGS
+	FastenerType      string `json:"fastener_type,omitempty"`      // NUT, BOLT
+	ThreadSize        string `json:"thread_size,omitempty"`
+	SeatType          string `json:"seat_type,omitempty"`
+	RingInnerDiameter int    `json:"ring_inner_diameter,omitempty"`
+	RingOuterDiameter int    `json:"ring_outer_diameter,omitempty"`
+	SpacerType        string `json:"spacer_type,omitempty"` // ADAPTER, EXTENDER
+	SpacerThickness   int    `json:"spacer_thickness,omitempty"`
+	PackageQuantity   int    `json:"package_quantity,omitempty"`
 }
 
 // CreateLotDTO contains the necessary data to create a new lot from the API.
 type CreateLotDTO struct {
 	WarehouseID     uuid.UUID `json:"warehouse_id" binding:"required"`
-	Type            string    `json:"type" binding:"required,oneof=TIRE RIM"`
+	Type            string    `json:"type" binding:"required,oneof=TIRE RIM ACCESSORY"`
 	Condition       string    `json:"condition" binding:"required,oneof=NEW USED"`
 	Brand           string    `json:"brand" binding:"required"`
 	Model           string    `json:"model"`
@@ -44,7 +53,7 @@ type CreateLotDTO struct {
 // UpdateLotDTO contains fields that can be updated.
 type UpdateLotDTO struct {
 	WarehouseID   *uuid.UUID `json:"warehouse_id"` // Optional: Move lot to another warehouse (inventory implication?)
-	Type          *string    `json:"type" binding:"omitempty,oneof=TIRE RIM"`
+	Type          *string    `json:"type" binding:"omitempty,oneof=TIRE RIM ACCESSORY"`
 	Condition     *string    `json:"condition" binding:"omitempty,oneof=NEW USED"`
 	Brand         *string    `json:"brand"`
 	Model         *string    `json:"model"`
@@ -76,10 +85,19 @@ type LotFilter struct {
 	AntiPuncture *bool
 
 	// Other Fields
-	Condition       string
-	Model           string
-	CurrentQuantity *int
-	SellPrice       *float64
+	Condition         string
+	Model             string
+	CurrentQuantity   *int
+	SellPrice         *float64
+	AccessoryCategory string
+	FastenerType      string
+	ThreadSize        string
+	SeatType          string
+	RingInnerDiameter int
+	RingOuterDiameter int
+	SpacerType        string
+	SpacerThickness   int
+	PackageQuantity   int
 }
 
 // LotPublicResponse is what the BUYER sees.

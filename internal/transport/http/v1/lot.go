@@ -203,6 +203,10 @@ func buildLotFilter(c *gin.Context) domain.LotFilter {
 	width, _ := strconv.Atoi(c.Query("width"))
 	profile, _ := strconv.Atoi(c.Query("profile"))
 	diameter, _ := strconv.Atoi(c.Query("diameter"))
+	ringInnerDiameter, _ := strconv.Atoi(c.Query("ring_inner_diameter"))
+	ringOuterDiameter, _ := strconv.Atoi(c.Query("ring_outer_diameter"))
+	spacerThickness, _ := strconv.Atoi(c.Query("spacer_thickness"))
+	packageQuantity, _ := strconv.Atoi(c.Query("package_quantity"))
 
 	var isRunFlat *bool
 	if val := c.Query("is_run_flat"); val != "" {
@@ -235,23 +239,32 @@ func buildLotFilter(c *gin.Context) domain.LotFilter {
 	}
 
 	return domain.LotFilter{
-		Page:            page,
-		PageSize:        pageSize,
-		Status:          c.Query("status"),
-		Brand:           c.Query("brand"),
-		Type:            c.Query("type"),
-		Search:          c.Query("search"),
-		Width:           width,
-		Profile:         profile,
-		Diameter:        diameter,
-		Season:          c.Query("season"),
-		Condition:       c.Query("condition"),
-		Model:           c.Query("model"),
-		IsRunFlat:       isRunFlat,
-		IsSpiked:        isSpiked,
-		AntiPuncture:    antiPuncture,
-		CurrentQuantity: currentQuantity,
-		SellPrice:       sellPrice,
+		Page:              page,
+		PageSize:          pageSize,
+		Status:            c.Query("status"),
+		Brand:             c.Query("brand"),
+		Type:              c.Query("type"),
+		Search:            c.Query("search"),
+		Width:             width,
+		Profile:           profile,
+		Diameter:          diameter,
+		Season:            c.Query("season"),
+		Condition:         c.Query("condition"),
+		Model:             c.Query("model"),
+		IsRunFlat:         isRunFlat,
+		IsSpiked:          isSpiked,
+		AntiPuncture:      antiPuncture,
+		CurrentQuantity:   currentQuantity,
+		SellPrice:         sellPrice,
+		AccessoryCategory: c.Query("accessory_category"),
+		FastenerType:      c.Query("fastener_type"),
+		ThreadSize:        c.Query("thread_size"),
+		SeatType:          c.Query("seat_type"),
+		RingInnerDiameter: ringInnerDiameter,
+		RingOuterDiameter: ringOuterDiameter,
+		SpacerType:        c.Query("spacer_type"),
+		SpacerThickness:   spacerThickness,
+		PackageQuantity:   packageQuantity,
 	}
 }
 

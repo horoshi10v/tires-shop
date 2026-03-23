@@ -227,6 +227,33 @@ func applyFilters(query *gorm.DB, filter domain.LotFilter) *gorm.DB {
 	if filter.Season != "" {
 		query = query.Where("params->>'season' = ?", filter.Season)
 	}
+	if filter.AccessoryCategory != "" {
+		query = query.Where("params->>'accessory_category' = ?", filter.AccessoryCategory)
+	}
+	if filter.FastenerType != "" {
+		query = query.Where("params->>'fastener_type' = ?", filter.FastenerType)
+	}
+	if filter.ThreadSize != "" {
+		query = query.Where("params->>'thread_size' ILIKE ?", "%"+filter.ThreadSize+"%")
+	}
+	if filter.SeatType != "" {
+		query = query.Where("params->>'seat_type' ILIKE ?", "%"+filter.SeatType+"%")
+	}
+	if filter.RingInnerDiameter > 0 {
+		query = query.Where("params->>'ring_inner_diameter' = ?", strconv.Itoa(filter.RingInnerDiameter))
+	}
+	if filter.RingOuterDiameter > 0 {
+		query = query.Where("params->>'ring_outer_diameter' = ?", strconv.Itoa(filter.RingOuterDiameter))
+	}
+	if filter.SpacerType != "" {
+		query = query.Where("params->>'spacer_type' = ?", filter.SpacerType)
+	}
+	if filter.SpacerThickness > 0 {
+		query = query.Where("params->>'spacer_thickness' = ?", strconv.Itoa(filter.SpacerThickness))
+	}
+	if filter.PackageQuantity > 0 {
+		query = query.Where("params->>'package_quantity' = ?", strconv.Itoa(filter.PackageQuantity))
+	}
 
 	// Boolean JSONB Params
 	if filter.IsRunFlat != nil {

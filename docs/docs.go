@@ -686,8 +686,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/domain.OrderResponse"
                         }
                     },
                     "400": {
@@ -1286,6 +1285,128 @@ const docTemplate = `{
                 }
             }
         },
+        "/staff/orders/{id}/message": {
+            "post": {
+                "security": [
+                    {
+                        "RoleAuth": []
+                    }
+                ],
+                "description": "Send a Telegram bot message to the customer tied to the order via customer_telegram_id.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orders-staff"
+                ],
+                "summary": "Send Order Message",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Order ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Message payload",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.SendOrderMessageDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/staff/orders/{id}/messages": {
+            "get": {
+                "security": [
+                    {
+                        "RoleAuth": []
+                    }
+                ],
+                "description": "Returns inbound and outbound Telegram messages linked to the order.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orders-staff"
+                ],
+                "summary": "List Order Messages",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Order ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.OrderMessage"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/staff/orders/{id}/status": {
             "put": {
                 "security": [
@@ -1704,6 +1825,14 @@ const docTemplate = `{
                 "customer_phone": {
                     "type": "string"
                 },
+                "customer_telegram_id": {
+                    "description": "Optional",
+                    "type": "integer"
+                },
+                "customer_username": {
+                    "description": "Optional",
+                    "type": "string"
+                },
                 "items": {
                     "type": "array",
                     "minItems": 1,
@@ -1920,7 +2049,16 @@ const docTemplate = `{
         "domain.OrderItemResponse": {
             "type": "object",
             "properties": {
+                "brand": {
+                    "type": "string"
+                },
                 "lot_id": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "photo": {
                     "type": "string"
                 },
                 "price": {
@@ -1934,6 +2072,46 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.OrderMessage": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "customer_telegram_id": {
+                    "type": "integer"
+                },
+                "direction": {
+                    "$ref": "#/definitions/domain.OrderMessageDirection"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "message_text": {
+                    "type": "string"
+                },
+                "order_id": {
+                    "type": "string"
+                },
+                "reply_to_telegram_message_id": {
+                    "type": "integer"
+                },
+                "telegram_message_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.OrderMessageDirection": {
+            "type": "string",
+            "enum": [
+                "OUTBOUND",
+                "INBOUND"
+            ],
+            "x-enum-varnames": [
+                "OrderMessageDirectionOutbound",
+                "OrderMessageDirectionInbound"
+            ]
+        },
         "domain.OrderResponse": {
             "type": "object",
             "properties": {
@@ -1944,6 +2122,12 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "customer_phone": {
+                    "type": "string"
+                },
+                "customer_telegram_id": {
+                    "type": "integer"
+                },
+                "customer_username": {
                     "type": "string"
                 },
                 "id": {
@@ -1983,6 +2167,17 @@ const docTemplate = `{
                 },
                 "total_revenue": {
                     "type": "number"
+                }
+            }
+        },
+        "domain.SendOrderMessageDTO": {
+            "type": "object",
+            "required": [
+                "message"
+            ],
+            "properties": {
+                "message": {
+                    "type": "string"
                 }
             }
         },

@@ -11,16 +11,23 @@ import (
 )
 
 type orderService struct {
-	repo     domain.OrderRepository
-	logger   *slog.Logger
-	notifier telegram.Notifier
+	repo      domain.OrderRepository
+	logger    *slog.Logger
+	notifier  telegram.Notifier
+	botSender telegram.Sender
 }
 
-func NewOrderService(repo domain.OrderRepository, logger *slog.Logger, notifier telegram.Notifier) domain.OrderService {
+func NewOrderService(
+	repo domain.OrderRepository,
+	logger *slog.Logger,
+	notifier telegram.Notifier,
+	botSender telegram.Sender,
+) domain.OrderService {
 	return &orderService{
-		repo:     repo,
-		logger:   logger,
-		notifier: notifier,
+		repo:      repo,
+		logger:    logger,
+		notifier:  notifier,
+		botSender: botSender,
 	}
 }
 
@@ -53,6 +60,62 @@ func (s *orderService) UpdateOrderStatus(ctx context.Context, id uuid.UUID, stat
 	s.notifier.SendAlert(msg)
 
 	return nil
+}
+
+func (s *orderService) SendOrderMessage(ctx context.Context, id uuid.UUID, message string) error {
+	order, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if order.CustomerTelegramID == nil || *order.CustomerTelegramID == 0 {
+		return fmt.Errorf("order does not have customer_telegram_id")
+	}
+
+	telegramMessageID, err := s.botSender.SendMessage(*order.CustomerTelegramID, message)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.repo.CreateMessage(ctx, domain.CreateOrderMessageDTO{
+		OrderID:            order.ID,
+		CustomerTelegramID: *order.CustomerTelegramID,
+		Direction:          domain.OrderMessageDirectionOutbound,
+		MessageText:        message,
+		TelegramMessageID:  telegramMessageID,
+	})
+	return err
+}
+
+func (s *orderService) ListOrderMessages(ctx context.Context, id uuid.UUID) ([]domain.OrderMessage, error) {
+	return s.repo.ListMessages(ctx, id)
+}
+
+func (s *orderService) ProcessInboundMessage(ctx context.Context, dto domain.InboundOrderMessageDTO) error {
+	if dto.CustomerTelegramID == 0 || dto.TelegramMessageID == 0 || dto.MessageText == "" || dto.ReplyToTelegramMessageID == nil {
+		return nil
+	}
+
+	parentMessage, err := s.repo.GetMessageByTelegramMeta(ctx, dto.CustomerTelegramID, *dto.ReplyToTelegramMessageID)
+	if err != nil {
+		return err
+	}
+	if parentMessage == nil {
+		return nil
+	}
+
+	_, err = s.repo.CreateMessage(ctx, domain.CreateOrderMessageDTO{
+		OrderID:                  parentMessage.OrderID,
+		CustomerTelegramID:       dto.CustomerTelegramID,
+		Direction:                domain.OrderMessageDirectionInbound,
+		MessageText:              dto.MessageText,
+		TelegramMessageID:        dto.TelegramMessageID,
+		ReplyToTelegramMessageID: dto.ReplyToTelegramMessageID,
+	})
+	return err
+}
+
+func (s *orderService) GetOrderByID(ctx context.Context, id uuid.UUID) (*domain.OrderResponse, error) {
+	return s.repo.GetByID(ctx, id)
 }
 
 func (s *orderService) ListOrders(ctx context.Context, filter domain.OrderFilter) ([]domain.OrderResponse, int64, error) {

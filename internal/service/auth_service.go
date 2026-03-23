@@ -28,7 +28,11 @@ func NewAuthService(repo domain.UserRepository, cfg *config.Config, logger *slog
 // LoginTelegram validates Telegram data, saves the user, and issues a JWT.
 func (s *authService) LoginTelegram(ctx context.Context, initData string) (*domain.AuthResponseDTO, error) {
 	// 1. Validate cryptographic signature
-	tgUser, err := telegram.ValidateInitData(initData, s.cfg.Auth.TelegramBotToken)
+	tgUser, err := telegram.ValidateInitDataWithTokens(
+		initData,
+		s.cfg.Auth.ClientTelegramBotToken,
+		s.cfg.Auth.TelegramBotToken,
+	)
 	if err != nil {
 		s.logger.Warn("invalid telegram login attempt", slog.String("error", err.Error()))
 		// For local testing via Postman WITHOUT a real frontend, you can temporarily bypass this

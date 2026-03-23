@@ -63,6 +63,7 @@ func main() {
 		&models.Lot{},
 		&models.Order{},
 		&models.OrderItem{},
+		&models.OrderMessage{},
 		&models.AuditLog{},
 		&models.User{},
 		&models.Transfer{},
@@ -91,8 +92,17 @@ func main() {
 	// ---------------------------------------------------------
 
 	// --- 1. Init Infrastructure Services ---
-	tgNotifier := telegram.NewNotifier(log)
+	tgNotifier := telegram.NewNotifier(log, cfg.Auth.TelegramBotToken)
 	tgNotifier.Start(context.Background())
+	clientBotSender := telegram.NewSender(log, cfg.Auth.ClientTelegramBotToken)
+
+	if err := telegram.EnsureWebhook(cfg.Auth.ClientTelegramBotToken, cfg.Telegram.ClientBotWebhookURL); err != nil {
+		log.Error("failed to ensure client bot webhook", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	if cfg.Telegram.ClientBotWebhookURL != "" {
+		log.Info("client bot webhook ensured", slog.String("url", cfg.Telegram.ClientBotWebhookURL))
+	}
 
 	qrGenerator := qrcode.NewQRGenerator()
 
@@ -133,12 +143,16 @@ func main() {
 	uploadHandler := v1.NewUploadHandler(minioStorage)
 
 	orderRepo := pg.NewOrderRepository(db)
-	orderService := service.NewOrderService(orderRepo, log, tgNotifier)
+	orderService := service.NewOrderService(orderRepo, log, tgNotifier, clientBotSender)
 	orderHandler := v1.NewOrderHandler(orderService)
 
 	reportRepo := pg.NewReportRepository(db)
 	reportService := service.NewReportService(reportRepo, log)
 	reportHandler := v1.NewReportHandler(reportService)
+
+	auditRepo := pg.NewAuditRepository(db)
+	auditService := service.NewAuditService(auditRepo, log)
+	auditHandler := v1.NewAuditHandler(auditService)
 
 	transferRepo := pg.NewTransferRepository(db)
 	transferService := service.NewTransferService(transferRepo, log, tgNotifier)
@@ -168,6 +182,7 @@ func main() {
 	{
 		publicAPI.GET("/lots", lotHandler.ListPublic)
 		publicAPI.POST("/auth/telegram", authHandler.LoginTelegram)
+		publicAPI.POST("/telegram/client/webhook", orderHandler.HandleClientBotWebhook)
 	}
 
 	clientAPI := router.Group("/api/v1")
@@ -188,6 +203,8 @@ func main() {
 		staffAPI.GET("/lots/:id/qr", lotHandler.GetQR)
 		staffAPI.GET("/orders", orderHandler.List)
 		staffAPI.PATCH("/orders/:id/status", orderHandler.UpdateStatus)
+		staffAPI.POST("/orders/:id/message", orderHandler.SendMessage)
+		staffAPI.GET("/orders/:id/messages", orderHandler.ListMessages)
 		staffAPI.GET("/transfers", transferHandler.List)
 		staffAPI.GET("/transfers/:id", transferHandler.GetByID)
 		staffAPI.POST("/transfers", transferHandler.Create)
@@ -208,6 +225,7 @@ func main() {
 		adminAPI.DELETE("/warehouses/:id", warehouseHandler.Delete)
 		adminAPI.GET("/exports/inventory", exportHandler.ExportInventory)
 		adminAPI.GET("/exports/pnl", exportHandler.ExportPnL)
+		adminAPI.GET("/audit-logs", auditHandler.ListAuditLogs)
 
 		// User Management Routes
 		adminAPI.GET("/users", userHandler.ListUsers)

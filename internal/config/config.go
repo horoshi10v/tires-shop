@@ -13,6 +13,7 @@ type Config struct {
 	HTTPServer          `yaml:"http_server"`
 	DB                  `yaml:"db"`
 	Auth                `yaml:"auth"`
+	Telegram            `yaml:"telegram"`
 	Storage             `yaml:"storage"`
 	GoogleSpreadsheetID string `yaml:"google_spreadsheet_id" env:"GOOGLE_SPREADSHEET_ID"`
 }
@@ -31,9 +32,14 @@ type DB struct {
 }
 
 type Auth struct {
-	JWTSecret        string        `env:"JWT_SECRET" env-required:"true"`
-	TelegramBotToken string        `env:"TELEGRAM_BOT_TOKEN" env-required:"true"`
-	TokenTTL         time.Duration `env:"JWT_TTL" env-default:"72h"`
+	JWTSecret              string        `env:"JWT_SECRET" env-required:"true"`
+	TelegramBotToken       string        `env:"TELEGRAM_BOT_TOKEN" env-required:"true"`
+	ClientTelegramBotToken string        `env:"CLIENT_TELEGRAM_BOT_TOKEN" env-required:"true"`
+	TokenTTL               time.Duration `env:"JWT_TTL" env-default:"72h"`
+}
+
+type Telegram struct {
+	ClientBotWebhookURL string `yaml:"client_bot_webhook_url" env:"CLIENT_BOT_WEBHOOK_URL"`
 }
 
 type Storage struct {

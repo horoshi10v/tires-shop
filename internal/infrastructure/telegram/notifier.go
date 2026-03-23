@@ -2,28 +2,47 @@ package telegram
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"log/slog"
+	"net/http"
+	"net/url"
 	"time"
 )
 
-// Notifier defines the interface for sending alerts.
 type Notifier interface {
 	SendAlert(message string)
-	Start(ctx context.Context) // Starts the background worker
+	Start(ctx context.Context)
+}
+
+type Sender interface {
+	SendMessage(chatID int64, message string) (int64, error)
 }
 
 type botNotifier struct {
 	logger *slog.Logger
 	queue  chan string // Канал (очередь) для сообщений
-	// token  string    // В будущем тут будет токен бота
-	// chatID string    // И ID чата директора
+	token  string
+	client *http.Client
 }
 
 // NewNotifier creates a new asynchronous Telegram notifier.
-func NewNotifier(logger *slog.Logger) Notifier {
+func NewNotifier(logger *slog.Logger, token string) Notifier {
 	return &botNotifier{
 		logger: logger,
 		queue:  make(chan string, 100), // Буферизованный канал на 100 сообщений
+		token:  token,
+		client: &http.Client{Timeout: 10 * time.Second},
+	}
+}
+
+func NewSender(logger *slog.Logger, token string) Sender {
+	return &botNotifier{
+		logger: logger,
+		queue:  make(chan string, 1),
+		token:  token,
+		client: &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
@@ -39,6 +58,49 @@ func (b *botNotifier) SendAlert(message string) {
 	}
 }
 
+func (b *botNotifier) SendMessage(chatID int64, message string) (int64, error) {
+	if chatID == 0 {
+		return 0, fmt.Errorf("telegram chat id is required")
+	}
+	if message == "" {
+		return 0, fmt.Errorf("message is required")
+	}
+	if b.token == "" {
+		return 0, fmt.Errorf("telegram bot token is not configured")
+	}
+
+	endpoint := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", b.token)
+	form := url.Values{}
+	form.Set("chat_id", fmt.Sprintf("%d", chatID))
+	form.Set("text", message)
+	form.Set("reply_markup", `{"force_reply":true,"input_field_placeholder":"Відповісти на повідомлення"}`)
+
+	resp, err := b.client.PostForm(endpoint, form)
+	if err != nil {
+		return 0, fmt.Errorf("telegram send request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var payload struct {
+		OK          bool   `json:"ok"`
+		Description string `json:"description"`
+		Result      struct {
+			MessageID int64 `json:"message_id"`
+		} `json:"result"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return 0, fmt.Errorf("telegram response decode failed: %w", err)
+	}
+	if !payload.OK {
+		if payload.Description == "" {
+			payload.Description = "telegram api returned not ok"
+		}
+		return 0, errors.New(payload.Description)
+	}
+
+	return payload.Result.MessageID, nil
+}
+
 // Start runs a background worker (Goroutine) that listens to the queue.
 func (b *botNotifier) Start(ctx context.Context) {
 	b.logger.Info("starting telegram notifier worker")
@@ -52,9 +114,6 @@ func (b *botNotifier) Start(ctx context.Context) {
 			case msg := <-b.queue:
 				// Имитация задержки сети (обращение к API Telegram)
 				time.Sleep(1 * time.Second)
-
-				// В реальном проекте здесь будет:
-				// http.Post("https://api.telegram.org/bot<TOKEN>/sendMessage?chat_id=<ID>&text=" + msg)
 
 				b.logger.Info("🚀 [TELEGRAM MSG SENT]: " + msg)
 			}

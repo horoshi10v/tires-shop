@@ -11,6 +11,21 @@ import (
 	"github.com/horoshi10v/tires-shop/internal/domain"
 )
 
+type telegramWebhookMessage struct {
+	MessageID int64  `json:"message_id"`
+	Text      string `json:"text"`
+	Chat      struct {
+		ID int64 `json:"id"`
+	} `json:"chat"`
+	ReplyToMessage *struct {
+		MessageID int64 `json:"message_id"`
+	} `json:"reply_to_message"`
+}
+
+type telegramWebhookUpdate struct {
+	Message *telegramWebhookMessage `json:"message"`
+}
+
 type OrderHandler struct {
 	service domain.OrderService
 }
@@ -28,7 +43,7 @@ func NewOrderHandler(service domain.OrderService) *OrderHandler {
 //	@Produce      json
 //	@Security     RoleAuth
 //	@Param        order  body      domain.CreateOrderDTO  true  "Order details"
-//	@Success      201    {object}  map[string]interface{} "Created"
+//	@Success      201    {object}  domain.OrderResponse "Created"
 //	@Failure      400    {object}  map[string]string "Bad Request"
 //	@Failure      401    {object}  map[string]string "Unauthorized"
 //	@Failure      403    {object}  map[string]string "Forbidden"
@@ -60,10 +75,13 @@ func (h *OrderHandler) Create(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
-		"message":  "order created successfully",
-		"order_id": orderID,
-	})
+	order, err := h.service.GetOrderByID(c.Request.Context(), orderID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "order created but failed to fetch response"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, order)
 }
 
 // UpdateStatus handles the HTTP request to change an order's status.
@@ -109,6 +127,105 @@ func (h *OrderHandler) UpdateStatus(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "order status updated and logged"})
+}
+
+// SendMessage sends a direct Telegram bot message to the order customer.
+//
+//	@Summary      Send Order Message
+//	@Description  Send a Telegram bot message to the customer tied to the order via customer_telegram_id.
+//	@Tags         orders-staff
+//	@Accept       json
+//	@Produce      json
+//	@Security     RoleAuth
+//	@Param        id    path      string                      true  "Order ID"
+//	@Param        data  body      domain.SendOrderMessageDTO  true  "Message payload"
+//	@Success      200   {object}  map[string]string "OK"
+//	@Failure      400   {object}  map[string]string "Bad Request"
+//	@Failure      500   {object}  map[string]string "Internal Server Error"
+//	@Router       /staff/orders/{id}/message [post]
+func (h *OrderHandler) SendMessage(c *gin.Context) {
+	orderIDParam := c.Param("id")
+	orderID, err := uuid.Parse(orderIDParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid order id format"})
+		return
+	}
+
+	var req domain.SendOrderMessageDTO
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.service.SendOrderMessage(c.Request.Context(), orderID, req.Message); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "bot message sent"})
+}
+
+// ListMessages returns the message history for a specific order.
+//
+//	@Summary      List Order Messages
+//	@Description  Returns inbound and outbound Telegram messages linked to the order.
+//	@Tags         orders-staff
+//	@Produce      json
+//	@Security     RoleAuth
+//	@Param        id    path      string  true  "Order ID"
+//	@Success      200   {array}   domain.OrderMessage
+//	@Failure      400   {object}  map[string]string "Bad Request"
+//	@Failure      500   {object}  map[string]string "Internal Server Error"
+//	@Router       /staff/orders/{id}/messages [get]
+func (h *OrderHandler) ListMessages(c *gin.Context) {
+	orderID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid order id format"})
+		return
+	}
+
+	messages, err := h.service.ListOrderMessages(c.Request.Context(), orderID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if messages == nil {
+		messages = []domain.OrderMessage{}
+	}
+
+	c.JSON(http.StatusOK, messages)
+}
+
+func (h *OrderHandler) HandleClientBotWebhook(c *gin.Context) {
+	var update telegramWebhookUpdate
+	if err := c.ShouldBindJSON(&update); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid webhook payload"})
+		return
+	}
+
+	if update.Message == nil || update.Message.Chat.ID == 0 || update.Message.Text == "" {
+		c.JSON(http.StatusOK, gin.H{"message": "ignored"})
+		return
+	}
+
+	var replyToMessageID *int64
+	if update.Message.ReplyToMessage != nil && update.Message.ReplyToMessage.MessageID != 0 {
+		replyID := update.Message.ReplyToMessage.MessageID
+		replyToMessageID = &replyID
+	}
+
+	if err := h.service.ProcessInboundMessage(c.Request.Context(), domain.InboundOrderMessageDTO{
+		CustomerTelegramID:       update.Message.Chat.ID,
+		TelegramMessageID:        update.Message.MessageID,
+		ReplyToTelegramMessageID: replyToMessageID,
+		MessageText:              update.Message.Text,
+	}); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "accepted"})
 }
 
 // List handles listing orders with filters.

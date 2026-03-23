@@ -3,6 +3,7 @@ package pg
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -61,8 +62,16 @@ func (r *OrderRepo) CreateOrderTx(ctx context.Context, dto domain.CreateOrderDTO
 			}
 
 			// 4. Prepare Order Item
+			photo := ""
+			if len(lot.Photos) > 0 {
+				photo = lot.Photos[0]
+			}
+
 			orderItems = append(orderItems, models.OrderItem{
 				LotID:         lot.ID,
+				Brand:         lot.Brand,
+				Model:         lot.Model,
+				Photo:         photo,
 				Quantity:      item.Quantity,
 				PriceAtMoment: lot.SellPrice,
 				CostAtMoment:  lot.PurchasePrice, // Saved securely for P&L reports
@@ -74,12 +83,14 @@ func (r *OrderRepo) CreateOrderTx(ctx context.Context, dto domain.CreateOrderDTO
 
 		// 6. Create the main Order record
 		order := models.Order{
-			UserID:        userID, // Link to user if provided
-			CustomerName:  dto.CustomerName,
-			CustomerPhone: dto.CustomerPhone,
-			Status:        "NEW",
-			TotalAmount:   totalAmount,
-			Items:         orderItems, // GORM will automatically insert these related items
+			UserID:             userID, // Link to user if provided
+			CustomerName:       dto.CustomerName,
+			CustomerPhone:      dto.CustomerPhone,
+			CustomerUsername:   dto.CustomerUsername,
+			CustomerTelegramID: dto.CustomerTelegramID,
+			Status:             "NEW",
+			TotalAmount:        totalAmount,
+			Items:              orderItems, // GORM will automatically insert these related items
 		}
 
 		if err := tx.Create(&order).Error; err != nil {
@@ -172,6 +183,114 @@ func (r *OrderRepo) UpdateStatus(ctx context.Context, id uuid.UUID, newStatus st
 	})
 }
 
+func (r *OrderRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.OrderResponse, error) {
+	var order models.Order
+	if err := r.db.WithContext(ctx).Preload("Items").First(&order, "id = ?", id).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch order: %w", err)
+	}
+
+	var items []domain.OrderItemResponse
+	for _, item := range order.Items {
+		items = append(items, domain.OrderItemResponse{
+			LotID:    item.LotID,
+			Brand:    item.Brand,
+			Model:    item.Model,
+			Photo:    item.Photo,
+			Quantity: item.Quantity,
+			Price:    item.PriceAtMoment,
+			Total:    item.PriceAtMoment * float64(item.Quantity),
+		})
+	}
+
+	return &domain.OrderResponse{
+		ID:                 order.ID,
+		CustomerName:       order.CustomerName,
+		CustomerPhone:      order.CustomerPhone,
+		CustomerUsername:   order.CustomerUsername,
+		CustomerTelegramID: order.CustomerTelegramID,
+		Status:             order.Status,
+		TotalAmount:        order.TotalAmount,
+		CreatedAt:          order.CreatedAt.Format("2006-01-02 15:04:05"),
+		Items:              items,
+	}, nil
+}
+
+func (r *OrderRepo) CreateMessage(ctx context.Context, dto domain.CreateOrderMessageDTO) (*domain.OrderMessage, error) {
+	orderMessage := models.OrderMessage{
+		OrderID:                  dto.OrderID,
+		CustomerTelegramID:       dto.CustomerTelegramID,
+		Direction:                string(dto.Direction),
+		MessageText:              dto.MessageText,
+		TelegramMessageID:        dto.TelegramMessageID,
+		ReplyToTelegramMessageID: dto.ReplyToTelegramMessageID,
+	}
+
+	if err := r.db.WithContext(ctx).Create(&orderMessage).Error; err != nil {
+		return nil, fmt.Errorf("failed to create order message: %w", err)
+	}
+
+	return &domain.OrderMessage{
+		ID:                       orderMessage.ID,
+		OrderID:                  orderMessage.OrderID,
+		CustomerTelegramID:       orderMessage.CustomerTelegramID,
+		Direction:                domain.OrderMessageDirection(orderMessage.Direction),
+		MessageText:              orderMessage.MessageText,
+		TelegramMessageID:        orderMessage.TelegramMessageID,
+		ReplyToTelegramMessageID: orderMessage.ReplyToTelegramMessageID,
+		CreatedAt:                orderMessage.CreatedAt.Format("2006-01-02 15:04:05"),
+	}, nil
+}
+
+func (r *OrderRepo) ListMessages(ctx context.Context, orderID uuid.UUID) ([]domain.OrderMessage, error) {
+	var dbMessages []models.OrderMessage
+
+	if err := r.db.WithContext(ctx).
+		Where("order_id = ?", orderID).
+		Order("created_at ASC").
+		Find(&dbMessages).Error; err != nil {
+		return nil, fmt.Errorf("failed to list order messages: %w", err)
+	}
+
+	messages := make([]domain.OrderMessage, 0, len(dbMessages))
+	for _, message := range dbMessages {
+		messages = append(messages, domain.OrderMessage{
+			ID:                       message.ID,
+			OrderID:                  message.OrderID,
+			CustomerTelegramID:       message.CustomerTelegramID,
+			Direction:                domain.OrderMessageDirection(message.Direction),
+			MessageText:              message.MessageText,
+			TelegramMessageID:        message.TelegramMessageID,
+			ReplyToTelegramMessageID: message.ReplyToTelegramMessageID,
+			CreatedAt:                message.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+
+	return messages, nil
+}
+
+func (r *OrderRepo) GetMessageByTelegramMeta(ctx context.Context, customerTelegramID int64, telegramMessageID int64) (*domain.OrderMessage, error) {
+	var message models.OrderMessage
+	if err := r.db.WithContext(ctx).
+		Where("customer_telegram_id = ? AND telegram_message_id = ?", customerTelegramID, telegramMessageID).
+		First(&message).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to fetch order message by telegram metadata: %w", err)
+	}
+
+	return &domain.OrderMessage{
+		ID:                       message.ID,
+		OrderID:                  message.OrderID,
+		CustomerTelegramID:       message.CustomerTelegramID,
+		Direction:                domain.OrderMessageDirection(message.Direction),
+		MessageText:              message.MessageText,
+		TelegramMessageID:        message.TelegramMessageID,
+		ReplyToTelegramMessageID: message.ReplyToTelegramMessageID,
+		CreatedAt:                message.CreatedAt.Format("2006-01-02 15:04:05"),
+	}, nil
+}
+
 // List retrieves a paginated list of orders with filters.
 func (r *OrderRepo) List(ctx context.Context, filter domain.OrderFilter) ([]domain.OrderResponse, int64, error) {
 	var dbOrders []models.Order
@@ -201,6 +320,9 @@ func (r *OrderRepo) List(ctx context.Context, filter domain.OrderFilter) ([]doma
 		for _, item := range order.Items {
 			items = append(items, domain.OrderItemResponse{
 				LotID:    item.LotID,
+				Brand:    item.Brand,
+				Model:    item.Model,
+				Photo:    item.Photo,
 				Quantity: item.Quantity,
 				Price:    item.PriceAtMoment,
 				Total:    item.PriceAtMoment * float64(item.Quantity),
@@ -208,13 +330,15 @@ func (r *OrderRepo) List(ctx context.Context, filter domain.OrderFilter) ([]doma
 		}
 
 		responses = append(responses, domain.OrderResponse{
-			ID:            order.ID,
-			CustomerName:  order.CustomerName,
-			CustomerPhone: order.CustomerPhone,
-			Status:        order.Status,
-			TotalAmount:   order.TotalAmount,
-			CreatedAt:     order.CreatedAt.Format("2006-01-02 15:04:05"),
-			Items:         items,
+			ID:                 order.ID,
+			CustomerName:       order.CustomerName,
+			CustomerPhone:      order.CustomerPhone,
+			CustomerUsername:   order.CustomerUsername,
+			CustomerTelegramID: order.CustomerTelegramID,
+			Status:             order.Status,
+			TotalAmount:        order.TotalAmount,
+			CreatedAt:          order.CreatedAt.Format("2006-01-02 15:04:05"),
+			Items:              items,
 		})
 	}
 
@@ -247,6 +371,9 @@ func (r *OrderRepo) ListByUserID(ctx context.Context, userID uuid.UUID, filter d
 		for _, item := range order.Items {
 			items = append(items, domain.OrderItemResponse{
 				LotID:    item.LotID,
+				Brand:    item.Brand,
+				Model:    item.Model,
+				Photo:    item.Photo,
 				Quantity: item.Quantity,
 				Price:    item.PriceAtMoment,
 				Total:    item.PriceAtMoment * float64(item.Quantity),
@@ -254,13 +381,15 @@ func (r *OrderRepo) ListByUserID(ctx context.Context, userID uuid.UUID, filter d
 		}
 
 		responses = append(responses, domain.OrderResponse{
-			ID:            order.ID,
-			CustomerName:  order.CustomerName,
-			CustomerPhone: order.CustomerPhone,
-			Status:        order.Status,
-			TotalAmount:   order.TotalAmount,
-			CreatedAt:     order.CreatedAt.Format("2006-01-02 15:04:05"),
-			Items:         items,
+			ID:                 order.ID,
+			CustomerName:       order.CustomerName,
+			CustomerPhone:      order.CustomerPhone,
+			CustomerUsername:   order.CustomerUsername,
+			CustomerTelegramID: order.CustomerTelegramID,
+			Status:             order.Status,
+			TotalAmount:        order.TotalAmount,
+			CreatedAt:          order.CreatedAt.Format("2006-01-02 15:04:05"),
+			Items:              items,
 		})
 	}
 

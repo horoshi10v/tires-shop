@@ -77,3 +77,26 @@ func ValidateInitData(initData, botToken string) (*TgUser, error) {
 
 	return &tgUser, nil
 }
+
+func ValidateInitDataWithTokens(initData string, botTokens ...string) (*TgUser, error) {
+	var lastErr error
+
+	for _, botToken := range botTokens {
+		if botToken == "" {
+			continue
+		}
+
+		tgUser, err := ValidateInitData(initData, botToken)
+		if err == nil {
+			return tgUser, nil
+		}
+
+		lastErr = err
+	}
+
+	if lastErr == nil {
+		lastErr = errors.New("no bot tokens configured")
+	}
+
+	return nil, lastErr
+}

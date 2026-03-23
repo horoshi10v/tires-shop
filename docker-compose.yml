@@ -1,9 +1,24 @@
 version: '3.8'
 
 services:
+  api:
+    build: .
+    container_name: tires_backend
+    restart: always
+    ports:
+      - "8083:8083"
+    depends_on:
+      - db
+      - minio
+    env_file:
+      - .env
+    volumes:
+      - ./.minio-data:/app/.minio-data
+
   minio:
     image: minio/minio:latest
     container_name: tires-minio
+    restart: always
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -13,6 +28,7 @@ services:
     volumes:
       - ./.minio-data:/data
     command: server /data --console-address ":9001"
+
   db:
     image: postgres:15-alpine
     container_name: tires_shop_db
@@ -26,10 +42,10 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  # Визуальный интерфейс для базы (открой http://localhost:5050)
   pgadmin:
     image: dpage/pgadmin4
     container_name: tires_shop_pgadmin
+    restart: always
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: root

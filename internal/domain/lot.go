@@ -17,24 +17,28 @@ const (
 
 // LotParams contains specific attributes for tires/rims.
 type LotParams struct {
-	Width             int    `json:"width,omitempty"`
-	Profile           int    `json:"profile,omitempty"`
-	Diameter          int    `json:"diameter,omitempty"`
-	ProductionYear    int    `json:"production_year,omitempty"`
-	CountryOfOrigin   string `json:"country_of_origin,omitempty"`
-	Season            string `json:"season,omitempty"` // SUMMER, WINTER, ALL_SEASON
-	IsRunFlat         bool   `json:"is_run_flat"`
-	IsSpiked          bool   `json:"is_spiked"`
-	AntiPuncture      bool   `json:"anti_puncture"`
-	AccessoryCategory string `json:"accessory_category,omitempty"` // FASTENERS, HUB_RINGS, SPACERS, TIRE_BAGS
-	FastenerType      string `json:"fastener_type,omitempty"`      // NUT, BOLT
-	ThreadSize        string `json:"thread_size,omitempty"`
-	SeatType          string `json:"seat_type,omitempty"`
-	RingInnerDiameter int    `json:"ring_inner_diameter,omitempty"`
-	RingOuterDiameter int    `json:"ring_outer_diameter,omitempty"`
-	SpacerType        string `json:"spacer_type,omitempty"` // ADAPTER, EXTENDER
-	SpacerThickness   int    `json:"spacer_thickness,omitempty"`
-	PackageQuantity   int    `json:"package_quantity,omitempty"`
+	Width             float64 `json:"width,omitempty"`
+	Profile           float64 `json:"profile,omitempty"`
+	Diameter          float64 `json:"diameter,omitempty"`
+	PCD               string  `json:"pcd,omitempty"`
+	DIA               float64 `json:"dia,omitempty"`
+	ET                float64 `json:"et,omitempty"`
+	ProductionYear    int     `json:"production_year,omitempty"`
+	RimMaterial       string  `json:"rim_material,omitempty"`
+	CountryOfOrigin   string  `json:"country_of_origin,omitempty"`
+	Season            string  `json:"season,omitempty"` // SUMMER, WINTER, ALL_SEASON
+	IsRunFlat         bool    `json:"is_run_flat"`
+	IsSpiked          bool    `json:"is_spiked"`
+	AntiPuncture      bool    `json:"anti_puncture"`
+	AccessoryCategory string  `json:"accessory_category,omitempty"` // FASTENERS, HUB_RINGS, SPACERS, TIRE_BAGS
+	FastenerType      string  `json:"fastener_type,omitempty"`      // NUT, BOLT
+	ThreadSize        string  `json:"thread_size,omitempty"`
+	SeatType          string  `json:"seat_type,omitempty"`
+	RingInnerDiameter float64 `json:"ring_inner_diameter,omitempty"`
+	RingOuterDiameter float64 `json:"ring_outer_diameter,omitempty"`
+	SpacerType        string  `json:"spacer_type,omitempty"` // ADAPTER, EXTENDER
+	SpacerThickness   float64 `json:"spacer_thickness,omitempty"`
+	PackageQuantity   int     `json:"package_quantity,omitempty"`
 }
 
 // CreateLotDTO contains the necessary data to create a new lot from the API.
@@ -76,9 +80,13 @@ type LotFilter struct {
 	Brand           string
 	Type            string
 	Search          string
-	Width           int
-	Profile         int
-	Diameter        int
+	Width           float64
+	Profile         float64
+	Diameter        float64
+	PCD             string
+	DIA             float64
+	ET              float64
+	RimMaterial     string
 	ProductionYear  int
 	CountryOfOrigin string
 	Season          string
@@ -95,10 +103,10 @@ type LotFilter struct {
 	FastenerType      string
 	ThreadSize        string
 	SeatType          string
-	RingInnerDiameter int
-	RingOuterDiameter int
+	RingInnerDiameter float64
+	RingOuterDiameter float64
 	SpacerType        string
-	SpacerThickness   int
+	SpacerThickness   float64
 	PackageQuantity   int
 }
 

@@ -475,10 +475,10 @@ func suggestionScore(value string, valueLower string, queryLower string, freeTex
 
 func buildSuggestionSizeLabel(params domain.LotParams, lotType models.LotType) string {
 	if params.Width > 0 && params.Profile > 0 && params.Diameter > 0 {
-		return fmt.Sprintf("%d/%d R%d", params.Width, params.Profile, params.Diameter)
+		return fmt.Sprintf("%s/%s R%s", formatNumericParam(params.Width), formatNumericParam(params.Profile), formatNumericParam(params.Diameter))
 	}
 	if lotType == models.LotTypeRim && params.Diameter > 0 {
-		return fmt.Sprintf("R%d", params.Diameter)
+		return fmt.Sprintf("R%s", formatNumericParam(params.Diameter))
 	}
 	return ""
 }
@@ -604,6 +604,10 @@ func isDigits(value string) bool {
 	return true
 }
 
+func formatNumericParam(value float64) string {
+	return strconv.FormatFloat(value, 'f', -1, 64)
+}
+
 func applyFilters(query *gorm.DB, filter domain.LotFilter) *gorm.DB {
 	if filter.Brand != "" {
 		query = query.Where("brand ILIKE ?", "%"+filter.Brand+"%")
@@ -670,16 +674,28 @@ func applyFilters(query *gorm.DB, filter domain.LotFilter) *gorm.DB {
 		}
 	}
 	if filter.Width > 0 {
-		query = query.Where("params->>'width' = ?", strconv.Itoa(filter.Width))
+		query = query.Where("params->>'width' = ?", formatNumericParam(filter.Width))
 	}
 	if filter.Profile > 0 {
-		query = query.Where("params->>'profile' = ?", strconv.Itoa(filter.Profile))
+		query = query.Where("params->>'profile' = ?", formatNumericParam(filter.Profile))
 	}
 	if filter.Diameter > 0 {
-		query = query.Where("params->>'diameter' = ?", strconv.Itoa(filter.Diameter))
+		query = query.Where("params->>'diameter' = ?", formatNumericParam(filter.Diameter))
 	}
 	if filter.ProductionYear > 0 {
 		query = query.Where("params->>'production_year' = ?", strconv.Itoa(filter.ProductionYear))
+	}
+	if filter.PCD != "" {
+		query = query.Where("params->>'pcd' ILIKE ?", "%"+filter.PCD+"%")
+	}
+	if filter.DIA > 0 {
+		query = query.Where("params->>'dia' = ?", formatNumericParam(filter.DIA))
+	}
+	if filter.ET != 0 {
+		query = query.Where("params->>'et' = ?", formatNumericParam(filter.ET))
+	}
+	if filter.RimMaterial != "" {
+		query = query.Where("params->>'rim_material' = ?", filter.RimMaterial)
 	}
 	if filter.CountryOfOrigin != "" {
 		query = query.Where("params->>'country_of_origin' ILIKE ?", "%"+filter.CountryOfOrigin+"%")
@@ -700,16 +716,16 @@ func applyFilters(query *gorm.DB, filter domain.LotFilter) *gorm.DB {
 		query = query.Where("params->>'seat_type' ILIKE ?", "%"+filter.SeatType+"%")
 	}
 	if filter.RingInnerDiameter > 0 {
-		query = query.Where("params->>'ring_inner_diameter' = ?", strconv.Itoa(filter.RingInnerDiameter))
+		query = query.Where("params->>'ring_inner_diameter' = ?", formatNumericParam(filter.RingInnerDiameter))
 	}
 	if filter.RingOuterDiameter > 0 {
-		query = query.Where("params->>'ring_outer_diameter' = ?", strconv.Itoa(filter.RingOuterDiameter))
+		query = query.Where("params->>'ring_outer_diameter' = ?", formatNumericParam(filter.RingOuterDiameter))
 	}
 	if filter.SpacerType != "" {
 		query = query.Where("params->>'spacer_type' = ?", filter.SpacerType)
 	}
 	if filter.SpacerThickness > 0 {
-		query = query.Where("params->>'spacer_thickness' = ?", strconv.Itoa(filter.SpacerThickness))
+		query = query.Where("params->>'spacer_thickness' = ?", formatNumericParam(filter.SpacerThickness))
 	}
 	if filter.PackageQuantity > 0 {
 		query = query.Where("params->>'package_quantity' = ?", strconv.Itoa(filter.PackageQuantity))

@@ -248,13 +248,15 @@ func buildLotFilter(c *gin.Context) domain.LotFilter {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
 
-	width, _ := strconv.Atoi(c.Query("width"))
-	profile, _ := strconv.Atoi(c.Query("profile"))
-	diameter, _ := strconv.Atoi(c.Query("diameter"))
+	width, _ := strconv.ParseFloat(c.Query("width"), 64)
+	profile, _ := strconv.ParseFloat(c.Query("profile"), 64)
+	diameter, _ := strconv.ParseFloat(c.Query("diameter"), 64)
 	productionYear, _ := strconv.Atoi(c.Query("production_year"))
-	ringInnerDiameter, _ := strconv.Atoi(c.Query("ring_inner_diameter"))
-	ringOuterDiameter, _ := strconv.Atoi(c.Query("ring_outer_diameter"))
-	spacerThickness, _ := strconv.Atoi(c.Query("spacer_thickness"))
+	dia, _ := strconv.ParseFloat(c.Query("dia"), 64)
+	et, _ := strconv.ParseFloat(c.Query("et"), 64)
+	ringInnerDiameter, _ := strconv.ParseFloat(c.Query("ring_inner_diameter"), 64)
+	ringOuterDiameter, _ := strconv.ParseFloat(c.Query("ring_outer_diameter"), 64)
+	spacerThickness, _ := strconv.ParseFloat(c.Query("spacer_thickness"), 64)
 	packageQuantity, _ := strconv.Atoi(c.Query("package_quantity"))
 
 	var isRunFlat *bool
@@ -299,6 +301,10 @@ func buildLotFilter(c *gin.Context) domain.LotFilter {
 		Width:             width,
 		Profile:           profile,
 		Diameter:          diameter,
+		PCD:               c.Query("pcd"),
+		DIA:               dia,
+		ET:                et,
+		RimMaterial:       c.Query("rim_material"),
 		ProductionYear:    productionYear,
 		CountryOfOrigin:   c.Query("country_of_origin"),
 		Season:            c.Query("season"),

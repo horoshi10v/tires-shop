@@ -20,6 +20,8 @@ type LotParams struct {
 	Width             int    `json:"width,omitempty"`
 	Profile           int    `json:"profile,omitempty"`
 	Diameter          int    `json:"diameter,omitempty"`
+	ProductionYear    int    `json:"production_year,omitempty"`
+	CountryOfOrigin   string `json:"country_of_origin,omitempty"`
 	Season            string `json:"season,omitempty"` // SUMMER, WINTER, ALL_SEASON
 	IsRunFlat         bool   `json:"is_run_flat"`
 	IsSpiked          bool   `json:"is_spiked"`
@@ -66,18 +68,20 @@ type UpdateLotDTO struct {
 
 // LotFilter defines the criteria for searching and paginating lots.
 type LotFilter struct {
-	Page      int
-	PageSize  int
-	SortBy    string
-	SortOrder string
-	Status    string
-	Brand     string
-	Type      string
-	Search    string
-	Width     int
-	Profile   int
-	Diameter  int
-	Season    string
+	Page            int
+	PageSize        int
+	SortBy          string
+	SortOrder       string
+	Status          string
+	Brand           string
+	Type            string
+	Search          string
+	Width           int
+	Profile         int
+	Diameter        int
+	ProductionYear  int
+	CountryOfOrigin string
+	Season          string
 
 	IsRunFlat    *bool
 	IsSpiked     *bool

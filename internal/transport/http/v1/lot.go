@@ -187,6 +187,7 @@ func buildLotFilter(c *gin.Context) domain.LotFilter {
 	width, _ := strconv.Atoi(c.Query("width"))
 	profile, _ := strconv.Atoi(c.Query("profile"))
 	diameter, _ := strconv.Atoi(c.Query("diameter"))
+	productionYear, _ := strconv.Atoi(c.Query("production_year"))
 	ringInnerDiameter, _ := strconv.Atoi(c.Query("ring_inner_diameter"))
 	ringOuterDiameter, _ := strconv.Atoi(c.Query("ring_outer_diameter"))
 	spacerThickness, _ := strconv.Atoi(c.Query("spacer_thickness"))
@@ -234,6 +235,8 @@ func buildLotFilter(c *gin.Context) domain.LotFilter {
 		Width:             width,
 		Profile:           profile,
 		Diameter:          diameter,
+		ProductionYear:    productionYear,
+		CountryOfOrigin:   c.Query("country_of_origin"),
 		Season:            c.Query("season"),
 		Condition:         c.Query("condition"),
 		Model:             c.Query("model"),

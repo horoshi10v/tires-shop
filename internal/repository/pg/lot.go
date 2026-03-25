@@ -239,6 +239,12 @@ func applyFilters(query *gorm.DB, filter domain.LotFilter) *gorm.DB {
 	if filter.Diameter > 0 {
 		query = query.Where("params->>'diameter' = ?", strconv.Itoa(filter.Diameter))
 	}
+	if filter.ProductionYear > 0 {
+		query = query.Where("params->>'production_year' = ?", strconv.Itoa(filter.ProductionYear))
+	}
+	if filter.CountryOfOrigin != "" {
+		query = query.Where("params->>'country_of_origin' ILIKE ?", "%"+filter.CountryOfOrigin+"%")
+	}
 	if filter.Season != "" {
 		query = query.Where("params->>'season' = ?", filter.Season)
 	}

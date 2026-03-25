@@ -81,6 +81,40 @@ func (s *lotService) ListInternalLots(ctx context.Context, filter domain.LotFilt
 	return s.repo.ListInternal(ctx, filter)
 }
 
+func (s *lotService) ListPublicSuggestions(ctx context.Context, filter domain.LotFilter, limit int) ([]string, error) {
+	if limit <= 0 {
+		limit = 8
+	}
+	if limit > 12 {
+		limit = 12
+	}
+
+	s.logger.Debug("fetching public lot suggestions", slog.Int("limit", limit))
+	return s.repo.ListSuggestions(ctx, filter, false, limit)
+}
+
+func (s *lotService) ListInternalSuggestions(ctx context.Context, filter domain.LotFilter, limit int) ([]string, error) {
+	if limit <= 0 {
+		limit = 8
+	}
+	if limit > 12 {
+		limit = 12
+	}
+
+	s.logger.Debug("fetching internal lot suggestions", slog.Int("limit", limit))
+	return s.repo.ListSuggestions(ctx, filter, true, limit)
+}
+
+func (s *lotService) TrackPublicSuggestionSelection(ctx context.Context, suggestion string) error {
+	s.logger.Debug("tracking public suggestion selection", slog.String("suggestion", suggestion))
+	return s.repo.TrackSuggestionSelection(ctx, suggestion, false)
+}
+
+func (s *lotService) TrackInternalSuggestionSelection(ctx context.Context, suggestion string) error {
+	s.logger.Debug("tracking internal suggestion selection", slog.String("suggestion", suggestion))
+	return s.repo.TrackSuggestionSelection(ctx, suggestion, true)
+}
+
 func (s *lotService) GenerateLotQR(ctx context.Context, id uuid.UUID) ([]byte, error) {
 	s.logger.Info("generating qr code for lot", slog.String("lot_id", id.String()))
 

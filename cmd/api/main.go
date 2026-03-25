@@ -69,6 +69,7 @@ func main() {
 		&models.User{},
 		&models.Transfer{},
 		&models.TransferItem{},
+		&models.SearchSuggestionStat{},
 	); err != nil {
 		log.Error("migration failed", slog.String("error", err.Error()))
 		os.Exit(1)
@@ -186,6 +187,8 @@ func main() {
 	publicAPI := router.Group("/api/v1")
 	{
 		publicAPI.GET("/lots", lotHandler.ListPublic)
+		publicAPI.GET("/lots/suggestions", lotHandler.ListPublicSuggestions)
+		publicAPI.POST("/lots/suggestions/track", lotHandler.TrackPublicSuggestionSelection)
 		publicAPI.POST("/auth/telegram", authHandler.LoginTelegram)
 		publicAPI.POST("/telegram/client/webhook", orderHandler.HandleClientBotWebhook)
 	}
@@ -202,6 +205,8 @@ func main() {
 	staffAPI.Use(middleware.RequireRole(cfg.Auth.JWTSecret, "ADMIN", "STAFF"))
 	{
 		staffAPI.GET("/lots", lotHandler.ListInternal)
+		staffAPI.GET("/lots/suggestions", lotHandler.ListInternalSuggestions)
+		staffAPI.POST("/lots/suggestions/track", lotHandler.TrackInternalSuggestionSelection)
 		staffAPI.POST("/lots", lotHandler.Create)
 		staffAPI.PUT("/lots/:id", lotHandler.Update)
 		staffAPI.DELETE("/lots/:id", lotHandler.Delete)

@@ -127,6 +127,70 @@ func (h *LotHandler) ListPublic(c *gin.Context) {
 	})
 }
 
+func (h *LotHandler) ListPublicSuggestions(c *gin.Context) {
+	filter := buildLotFilter(c)
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "8"))
+
+	items, err := h.service.ListPublicSuggestions(c.Request.Context(), filter, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch lot suggestions"})
+		return
+	}
+
+	if items == nil {
+		items = []string{}
+	}
+
+	c.JSON(http.StatusOK, domain.LotSuggestionsResponse{Items: items})
+}
+
+func (h *LotHandler) ListInternalSuggestions(c *gin.Context) {
+	filter := buildLotFilter(c)
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "8"))
+
+	items, err := h.service.ListInternalSuggestions(c.Request.Context(), filter, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch lot suggestions"})
+		return
+	}
+
+	if items == nil {
+		items = []string{}
+	}
+
+	c.JSON(http.StatusOK, domain.LotSuggestionsResponse{Items: items})
+}
+
+func (h *LotHandler) TrackPublicSuggestionSelection(c *gin.Context) {
+	var req domain.SuggestionSelectionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payload", "details": err.Error()})
+		return
+	}
+
+	if err := h.service.TrackPublicSuggestionSelection(c.Request.Context(), req.Suggestion); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to track suggestion selection"})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
+func (h *LotHandler) TrackInternalSuggestionSelection(c *gin.Context) {
+	var req domain.SuggestionSelectionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payload", "details": err.Error()})
+		return
+	}
+
+	if err := h.service.TrackInternalSuggestionSelection(c.Request.Context(), req.Suggestion); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to track suggestion selection"})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
 func (h *LotHandler) ListInternal(c *gin.Context) {
 	filter := buildLotFilter(c)
 

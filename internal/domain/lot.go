@@ -125,6 +125,15 @@ type PaginatedLotPublicResponse struct {
 	HasNext  bool                `json:"has_next"`
 }
 
+// LotSuggestionsResponse is the lightweight response for autocomplete.
+type LotSuggestionsResponse struct {
+	Items []string `json:"items"`
+}
+
+type SuggestionSelectionRequest struct {
+	Suggestion string `json:"suggestion" binding:"required,min=1,max=120"`
+}
+
 // LotInternalResponse is what ADMIN and STAFF see.
 type LotInternalResponse struct {
 	LotPublicResponse
@@ -141,6 +150,8 @@ type LotRepository interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 	ListPublic(ctx context.Context, filter LotFilter) ([]LotPublicResponse, int64, error)
 	ListInternal(ctx context.Context, filter LotFilter) ([]LotInternalResponse, int64, error)
+	ListSuggestions(ctx context.Context, filter LotFilter, internal bool, limit int) ([]string, error)
+	TrackSuggestionSelection(ctx context.Context, suggestion string, internal bool) error
 }
 
 // LotService defines business logic operations for the Lot entity.
@@ -150,5 +161,9 @@ type LotService interface {
 	DeleteLot(ctx context.Context, id uuid.UUID) error
 	ListPublicLots(ctx context.Context, filter LotFilter) ([]LotPublicResponse, int64, error)
 	ListInternalLots(ctx context.Context, filter LotFilter) ([]LotInternalResponse, int64, error)
+	ListPublicSuggestions(ctx context.Context, filter LotFilter, limit int) ([]string, error)
+	ListInternalSuggestions(ctx context.Context, filter LotFilter, limit int) ([]string, error)
+	TrackPublicSuggestionSelection(ctx context.Context, suggestion string) error
+	TrackInternalSuggestionSelection(ctx context.Context, suggestion string) error
 	GenerateLotQR(ctx context.Context, id uuid.UUID) ([]byte, error)
 }

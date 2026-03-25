@@ -44,7 +44,7 @@ type CreateLotDTO struct {
 	Model           string    `json:"model"`
 	Params          LotParams `json:"params"`
 	Defects         string    `json:"defects"`
-	Photos          []string  `json:"photos"` // URLs to images
+	Photos          []string  `json:"photos"`
 	InitialQuantity int       `json:"initial_quantity" binding:"required,gt=0"`
 	PurchasePrice   float64   `json:"purchase_price" binding:"required,gt=0"`
 	SellPrice       float64   `json:"sell_price" binding:"required,gt=0"`
@@ -52,7 +52,7 @@ type CreateLotDTO struct {
 
 // UpdateLotDTO contains fields that can be updated.
 type UpdateLotDTO struct {
-	WarehouseID   *uuid.UUID `json:"warehouse_id"` // Optional: Move lot to another warehouse (inventory implication?)
+	WarehouseID   *uuid.UUID `json:"warehouse_id"`
 	Type          *string    `json:"type" binding:"omitempty,oneof=TIRE RIM ACCESSORY"`
 	Condition     *string    `json:"condition" binding:"omitempty,oneof=NEW USED"`
 	Brand         *string    `json:"brand"`
@@ -66,25 +66,23 @@ type UpdateLotDTO struct {
 
 // LotFilter defines the criteria for searching and paginating lots.
 type LotFilter struct {
-	Page     int
-	PageSize int
-	Status   string
-	Brand    string
-	Type     string
+	Page      int
+	PageSize  int
+	SortBy    string
+	SortOrder string
+	Status    string
+	Brand     string
+	Type      string
+	Search    string
+	Width     int
+	Profile   int
+	Diameter  int
+	Season    string
 
-	// New Filters
-	Search   string // Multi-field search (Brand, Model)
-	Width    int
-	Profile  int
-	Diameter int
-	Season   string
-
-	// Boolean Params
 	IsRunFlat    *bool
 	IsSpiked     *bool
 	AntiPuncture *bool
 
-	// Other Fields
 	Condition         string
 	Model             string
 	CurrentQuantity   *int
@@ -112,6 +110,15 @@ type LotPublicResponse struct {
 	Photos          []string  `json:"photos"`
 	CurrentQuantity int       `json:"current_quantity"`
 	SellPrice       float64   `json:"sell_price"`
+}
+
+// PaginatedLotPublicResponse is the paginated public contract for /lots.
+type PaginatedLotPublicResponse struct {
+	Items    []LotPublicResponse `json:"items"`
+	Page     int                 `json:"page"`
+	PageSize int                 `json:"page_size"`
+	Total    int64               `json:"total"`
+	HasNext  bool                `json:"has_next"`
 }
 
 // LotInternalResponse is what ADMIN and STAFF see.

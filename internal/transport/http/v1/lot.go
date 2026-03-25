@@ -1,8 +1,10 @@
 package v1
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -17,17 +19,6 @@ func NewLotHandler(service domain.LotService) *LotHandler {
 	return &LotHandler{service: service}
 }
 
-// Create handles the HTTP request to create a new lot.
-//
-//	@Summary      Create a new lot
-//	@Description  Add a new lot to the inventory.
-//	@Tags         lots-staff
-//	@Accept       json
-//	@Produce      json
-//	@Security     RoleAuth
-//	@Param        lot  body      domain.CreateLotDTO  true  "Lot details"
-//	@Success      201  {object}  map[string]interface{}
-//	@Router       /staff/lots [post]
 func (h *LotHandler) Create(c *gin.Context) {
 	var req domain.CreateLotDTO
 
@@ -45,20 +36,6 @@ func (h *LotHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"message": "lot created", "lot_id": id})
 }
 
-// Update handles updating an existing lot.
-//
-//	@Summary      Update a lot
-//	@Description  Update details of an existing lot.
-//	@Tags         lots-staff
-//	@Accept       json
-//	@Produce      json
-//	@Security     RoleAuth
-//	@Param        id   path      string               true  "Lot ID"
-//	@Param        lot  body      domain.UpdateLotDTO  true  "Lot update details"
-//	@Success      200  {object}  map[string]string
-//	@Failure      400  {object}  map[string]string
-//	@Failure      500  {object}  map[string]string
-//	@Router       /staff/lots/{id} [put]
 func (h *LotHandler) Update(c *gin.Context) {
 	idParam := c.Param("id")
 	lotID, err := uuid.Parse(idParam)
@@ -81,18 +58,6 @@ func (h *LotHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "lot updated successfully"})
 }
 
-// Delete handles deleting a lot.
-//
-//	@Summary      Delete a lot
-//	@Description  Soft delete a lot.
-//	@Tags         lots-staff
-//	@Produce      json
-//	@Security     RoleAuth
-//	@Param        id   path      string  true  "Lot ID"
-//	@Success      200  {object}  map[string]string
-//	@Failure      400  {object}  map[string]string
-//	@Failure      500  {object}  map[string]string
-//	@Router       /staff/lots/{id} [delete]
 func (h *LotHandler) Delete(c *gin.Context) {
 	idParam := c.Param("id")
 	lotID, err := uuid.Parse(idParam)
@@ -109,32 +74,39 @@ func (h *LotHandler) Delete(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "lot deleted successfully"})
 }
 
-// ListPublic retrieves a list of lots for buyers (hides sensitive data).
+// ListPublic retrieves a paginated and sorted list of public lots.
 //
 //	@Summary      List available lots (Public)
-//	@Description  Get active lots. Purchase price and archive data are hidden.
+//	@Description  Get active lots with server-side filtering, sorting, and pagination.
 //	@Tags         lots-public
 //	@Produce      json
-//	@Param        page      query     int     false  "Page number" default(1)
-//	@Param        page_size query     int     false  "Items per page" default(10)
-//	@Param        search    query     string  false  "Search by brand or model"
-//	@Param        brand     query     string  false  "Filter by brand name"
-//	@Param        type      query     string  false  "Filter by type (TIRE, RIM)"
-//	@Param        width     query     int     false  "Filter by width (mm)"
-//	@Param        profile   query     int     false  "Filter by profile (%)"
-//	@Param        diameter  query     int     false  "Filter by diameter (R)"
-//	@Param        season    query     string  false  "Filter by season"
-//	@Param        model     query     string  false  "Filter by model name"
-//	@Param        condition query     string  false  "Filter by condition (NEW/USED)"
-//	@Param        is_run_flat      query     bool    false  "Filter by run flat parameter"
-//	@Param        is_spiked        query     bool    false  "Filter by spiked parameter"
-//	@Param        anti_puncture    query     bool    false  "Filter by anti puncture parameter"
-//	@Param        sell_price       query     number  false  "Filter by exact sell price"
-//	@Param        current_quantity query     int     false  "Filter by exact quantity"
-//	@Success      200       {array}   domain.LotPublicResponse
+//	@Param        page          query     int     false  "Page number" default(1)
+//	@Param        page_size     query     int     false  "Items per page" default(12)
+//	@Param        sort_by       query     string  false  "Sort field: price, created_at, stock, popularity"
+//	@Param        sort_order    query     string  false  "Sort order: asc or desc"
+//	@Param        search        query     string  false  "Search by brand or model"
+//	@Param        brand         query     string  false  "Filter by brand name"
+//	@Param        type          query     string  false  "Filter by type (TIRE, RIM, ACCESSORY)"
+//	@Param        width         query     int     false  "Filter by width (mm)"
+//	@Param        profile       query     int     false  "Filter by profile (%)"
+//	@Param        diameter      query     int     false  "Filter by diameter (R)"
+//	@Param        season        query     string  false  "Filter by season"
+//	@Param        model         query     string  false  "Filter by model name"
+//	@Param        condition     query     string  false  "Filter by condition (NEW/USED)"
+//	@Param        is_run_flat   query     bool    false  "Filter by run flat parameter"
+//	@Param        is_spiked     query     bool    false  "Filter by spiked parameter"
+//	@Param        anti_puncture query     bool    false  "Filter by anti puncture parameter"
+//	@Param        sell_price    query     number  false  "Filter by exact sell price"
+//	@Param        current_quantity query int     false  "Filter by exact quantity"
+//	@Success      200  {object}  domain.PaginatedLotPublicResponse
+//	@Failure      400  {object}  map[string]string
 //	@Router       /lots [get]
 func (h *LotHandler) ListPublic(c *gin.Context) {
-	filter := buildLotFilter(c)
+	filter, err := buildPublicLotFilter(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid query params", "details": err.Error()})
+		return
+	}
 
 	lots, total, err := h.service.ListPublicLots(c.Request.Context(), filter)
 	if err != nil {
@@ -146,37 +118,15 @@ func (h *LotHandler) ListPublic(c *gin.Context) {
 		lots = []domain.LotPublicResponse{}
 	}
 
-	c.Header("X-Total-Count", strconv.FormatInt(total, 10))
-	c.Header("Access-Control-Expose-Headers", "X-Total-Count")
-	c.JSON(http.StatusOK, lots)
+	c.JSON(http.StatusOK, domain.PaginatedLotPublicResponse{
+		Items:    lots,
+		Page:     filter.Page,
+		PageSize: filter.PageSize,
+		Total:    total,
+		HasNext:  int64(filter.Page*filter.PageSize) < total,
+	})
 }
 
-// ListInternal retrieves a full list of lots for staff/admin.
-//
-//	@Summary      List all lots (Internal)
-//	@Description  Get lots including sensitive financial data and archives.
-//	@Tags         lots-staff
-//	@Produce      json
-//	@Security     RoleAuth
-//	@Param        page      query     int     false  "Page number" default(1)
-//	@Param        page_size query     int     false  "Items per page" default(10)
-//	@Param        search    query     string  false  "Search by brand or model"
-//	@Param        brand     query     string  false  "Filter by brand name"
-//	@Param        status    query     string  false  "Filter by status"
-//	@Param        type      query     string  false  "Filter by type (TIRE, RIM)"
-//	@Param        width     query     int     false  "Filter by width (mm)"
-//	@Param        profile   query     int     false  "Filter by profile (%)"
-//	@Param        diameter  query     int     false  "Filter by diameter (R)"
-//	@Param        season    query     string  false  "Filter by season"
-//	@Param        model     query     string  false  "Filter by model name"
-//	@Param        condition query     string  false  "Filter by condition (NEW/USED)"
-//	@Param        is_run_flat      query     bool    false  "Filter by run flat parameter"
-//	@Param        is_spiked        query     bool    false  "Filter by spiked parameter"
-//	@Param        anti_puncture    query     bool    false  "Filter by anti puncture parameter"
-//	@Param        sell_price       query     number  false  "Filter by exact sell price"
-//	@Param        current_quantity query     int     false  "Filter by exact quantity"
-//	@Success      200       {array}   domain.LotInternalResponse
-//	@Router       /staff/lots [get]
 func (h *LotHandler) ListInternal(c *gin.Context) {
 	filter := buildLotFilter(c)
 
@@ -195,7 +145,41 @@ func (h *LotHandler) ListInternal(c *gin.Context) {
 	c.JSON(http.StatusOK, lots)
 }
 
-// Helper to extract query params
+func buildPublicLotFilter(c *gin.Context) (domain.LotFilter, error) {
+	filter := buildLotFilter(c)
+
+	if filter.Page == 0 {
+		filter.Page = 1
+	}
+	if filter.PageSize == 0 {
+		filter.PageSize = 12
+	}
+	if filter.Page < 1 {
+		return domain.LotFilter{}, fmt.Errorf("page must be greater than or equal to 1")
+	}
+	if filter.PageSize < 1 || filter.PageSize > 50 {
+		return domain.LotFilter{}, fmt.Errorf("page_size must be between 1 and 50")
+	}
+
+	filter.SortBy = strings.ToLower(strings.TrimSpace(c.DefaultQuery("sort_by", "created_at")))
+	filter.SortOrder = strings.ToLower(strings.TrimSpace(c.DefaultQuery("sort_order", "desc")))
+
+	allowedSortBy := map[string]bool{
+		"price":      true,
+		"created_at": true,
+		"stock":      true,
+		"popularity": true,
+	}
+	if !allowedSortBy[filter.SortBy] {
+		return domain.LotFilter{}, fmt.Errorf("sort_by must be one of: price, created_at, stock, popularity")
+	}
+	if filter.SortOrder != "asc" && filter.SortOrder != "desc" {
+		return domain.LotFilter{}, fmt.Errorf("sort_order must be one of: asc, desc")
+	}
+
+	return filter, nil
+}
+
 func buildLotFilter(c *gin.Context) domain.LotFilter {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
@@ -241,6 +225,8 @@ func buildLotFilter(c *gin.Context) domain.LotFilter {
 	return domain.LotFilter{
 		Page:              page,
 		PageSize:          pageSize,
+		SortBy:            c.Query("sort_by"),
+		SortOrder:         c.Query("sort_order"),
 		Status:            c.Query("status"),
 		Brand:             c.Query("brand"),
 		Type:              c.Query("type"),
@@ -268,18 +254,6 @@ func buildLotFilter(c *gin.Context) domain.LotFilter {
 	}
 }
 
-// GetQR returns a PNG image of the QR code for a specific lot.
-//
-//	@Summary      Get Lot QR Code
-//	@Description  Generates and returns a PNG image of a QR code containing the Lot ID.
-//	@Tags         lots-admin
-//	@Produce      image/png
-//	@Security     RoleAuth
-//	@Param        id   path      string  true  "Lot ID"
-//	@Success      200  {file}    file    "PNG Image"
-//	@Failure      400  {object}  map[string]string
-//	@Failure      500  {object}  map[string]string
-//	@Router       /staff/lots/{id}/qr [get]
 func (h *LotHandler) GetQR(c *gin.Context) {
 	idParam := c.Param("id")
 	lotID, err := uuid.Parse(idParam)
@@ -294,6 +268,5 @@ func (h *LotHandler) GetQR(c *gin.Context) {
 		return
 	}
 
-	// Магия Gin: отдаем сырые байты как картинку
 	c.Data(http.StatusOK, "image/png", pngBytes)
 }

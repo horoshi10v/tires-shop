@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -23,15 +24,12 @@ func NewLotRepository(db *gorm.DB) domain.LotRepository {
 	return &LotRepo{db: db}
 }
 
-// Create inserts a new lot into the PostgreSQL database.
 func (r *LotRepo) Create(ctx context.Context, dto *domain.CreateLotDTO) (uuid.UUID, error) {
-	// 1. Marshal the strictly typed Params struct into a JSON byte array
 	paramsBytes, err := json.Marshal(dto.Params)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("failed to marshal lot params: %w", err)
 	}
 
-	// 2. Map DTO to GORM Database Model
 	dbModel := models.Lot{
 		WarehouseID:     dto.WarehouseID,
 		Type:            models.LotType(dto.Type),
@@ -40,15 +38,14 @@ func (r *LotRepo) Create(ctx context.Context, dto *domain.CreateLotDTO) (uuid.UU
 		Model:           dto.Model,
 		Params:          datatypes.JSON(paramsBytes),
 		Defects:         dto.Defects,
-		Photos:          dto.Photos, // Uses pq.StringArray under the hood
+		Photos:          dto.Photos,
 		InitialQuantity: dto.InitialQuantity,
-		CurrentQuantity: dto.InitialQuantity, // Initially, current == initial
+		CurrentQuantity: dto.InitialQuantity,
 		PurchasePrice:   dto.PurchasePrice,
 		SellPrice:       dto.SellPrice,
 		Status:          string(domain.LotStatusActive),
 	}
 
-	// 3. Execute the insert query
 	if err := r.db.WithContext(ctx).Create(&dbModel).Error; err != nil {
 		return uuid.Nil, fmt.Errorf("failed to insert lot to db: %w", err)
 	}
@@ -56,7 +53,6 @@ func (r *LotRepo) Create(ctx context.Context, dto *domain.CreateLotDTO) (uuid.UU
 	return dbModel.ID, nil
 }
 
-// Update updates an existing lot in the database.
 func (r *LotRepo) Update(ctx context.Context, id uuid.UUID, dto *domain.UpdateLotDTO) error {
 	updates := map[string]interface{}{}
 
@@ -110,7 +106,6 @@ func (r *LotRepo) Update(ctx context.Context, id uuid.UUID, dto *domain.UpdateLo
 	return nil
 }
 
-// Delete performs a soft delete on a lot.
 func (r *LotRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	result := r.db.WithContext(ctx).Delete(&models.Lot{}, id)
 	if result.Error != nil {
@@ -122,15 +117,12 @@ func (r *LotRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// ListPublic retrieves a paginated list of lots for Buyers (hides sensitive info and archives).
 func (r *LotRepo) ListPublic(ctx context.Context, filter domain.LotFilter) ([]domain.LotPublicResponse, int64, error) {
 	var dbModels []models.Lot
 	var total int64
 
-	// Buyers only see ACTIVE lots with stock > 0
 	query := r.db.WithContext(ctx).Model(&models.Lot{}).
-		Where("status = ?", domain.LotStatusActive).
-		Where("current_quantity > 0")
+		Where("status = ?", domain.LotStatusActive)
 
 	query = applyFilters(query, filter)
 
@@ -138,12 +130,14 @@ func (r *LotRepo) ListPublic(ctx context.Context, filter domain.LotFilter) ([]do
 		return nil, 0, fmt.Errorf("failed to count public lots: %w", err)
 	}
 
+	query = applySorting(query, filter)
+
 	offset := (filter.Page - 1) * filter.PageSize
 	if err := query.Offset(offset).Limit(filter.PageSize).Find(&dbModels).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to fetch public lots: %w", err)
 	}
 
-	var responses []domain.LotPublicResponse
+	responses := make([]domain.LotPublicResponse, 0, len(dbModels))
 	for _, m := range dbModels {
 		responses = append(responses, mapToPublicResponse(m))
 	}
@@ -151,14 +145,12 @@ func (r *LotRepo) ListPublic(ctx context.Context, filter domain.LotFilter) ([]do
 	return responses, total, nil
 }
 
-// ListInternal retrieves a full paginated list of lots for Staff/Admin.
 func (r *LotRepo) ListInternal(ctx context.Context, filter domain.LotFilter) ([]domain.LotInternalResponse, int64, error) {
 	var dbModels []models.Lot
 	var total int64
 
 	query := r.db.WithContext(ctx).Model(&models.Lot{})
 
-	// Staff can filter by any status (including ARCHIVED)
 	if filter.Status != "" {
 		query = query.Where("status = ?", filter.Status)
 	}
@@ -168,27 +160,53 @@ func (r *LotRepo) ListInternal(ctx context.Context, filter domain.LotFilter) ([]
 		return nil, 0, fmt.Errorf("failed to count internal lots: %w", err)
 	}
 
+	query = applySorting(query, filter)
+
 	offset := (filter.Page - 1) * filter.PageSize
 	if err := query.Offset(offset).Limit(filter.PageSize).Find(&dbModels).Error; err != nil {
 		return nil, 0, fmt.Errorf("failed to fetch internal lots: %w", err)
 	}
 
-	var responses []domain.LotInternalResponse
+	responses := make([]domain.LotInternalResponse, 0, len(dbModels))
 	for _, m := range dbModels {
-		internalRes := domain.LotInternalResponse{
+		responses = append(responses, domain.LotInternalResponse{
 			LotPublicResponse: mapToPublicResponse(m),
 			WarehouseID:       m.WarehouseID,
 			InitialQty:        m.InitialQuantity,
 			PurchasePrice:     m.PurchasePrice,
 			Status:            m.Status,
-		}
-		responses = append(responses, internalRes)
+		})
 	}
 
 	return responses, total, nil
 }
 
-// Helper function to apply common search filters
+func applySorting(query *gorm.DB, filter domain.LotFilter) *gorm.DB {
+	sortBy := strings.ToLower(strings.TrimSpace(filter.SortBy))
+	sortOrder := strings.ToLower(strings.TrimSpace(filter.SortOrder))
+	if sortOrder != "asc" {
+		sortOrder = "desc"
+	}
+
+	switch sortBy {
+	case "price":
+		query = query.Order("sell_price " + sortOrder).Order("created_at desc")
+	case "stock":
+		query = query.
+			Order("CASE WHEN current_quantity > 0 THEN 0 ELSE 1 END ASC").
+			Order("current_quantity DESC").
+			Order("created_at DESC")
+	case "popularity":
+		query = query.Order("created_at DESC")
+	case "created_at", "":
+		fallthrough
+	default:
+		query = query.Order("created_at DESC")
+	}
+
+	return query.Order("id DESC")
+}
+
 func applyFilters(query *gorm.DB, filter domain.LotFilter) *gorm.DB {
 	if filter.Brand != "" {
 		query = query.Where("brand ILIKE ?", "%"+filter.Brand+"%")
@@ -208,13 +226,10 @@ func applyFilters(query *gorm.DB, filter domain.LotFilter) *gorm.DB {
 	if filter.SellPrice != nil {
 		query = query.Where("sell_price = ?", *filter.SellPrice)
 	}
-
 	if filter.Search != "" {
 		searchTerm := "%" + filter.Search + "%"
 		query = query.Where("brand ILIKE ? OR model ILIKE ?", searchTerm, searchTerm)
 	}
-
-	// JSONB Filtering
 	if filter.Width > 0 {
 		query = query.Where("params->>'width' = ?", strconv.Itoa(filter.Width))
 	}
@@ -254,8 +269,6 @@ func applyFilters(query *gorm.DB, filter domain.LotFilter) *gorm.DB {
 	if filter.PackageQuantity > 0 {
 		query = query.Where("params->>'package_quantity' = ?", strconv.Itoa(filter.PackageQuantity))
 	}
-
-	// Boolean JSONB Params
 	if filter.IsRunFlat != nil {
 		val := "false"
 		if *filter.IsRunFlat {
@@ -281,7 +294,6 @@ func applyFilters(query *gorm.DB, filter domain.LotFilter) *gorm.DB {
 	return query
 }
 
-// Helper function to map DB model to Public Domain Response
 func mapToPublicResponse(m models.Lot) domain.LotPublicResponse {
 	var params domain.LotParams
 	if len(m.Params) > 0 {

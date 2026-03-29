@@ -191,12 +191,12 @@ func main() {
 		publicAPI.POST("/lots/suggestions/track", lotHandler.TrackPublicSuggestionSelection)
 		publicAPI.POST("/auth/telegram", authHandler.LoginTelegram)
 		publicAPI.POST("/telegram/client/webhook", orderHandler.HandleClientBotWebhook)
+		publicAPI.POST("/orders", middleware.OptionalAuth(cfg.Auth.JWTSecret), orderHandler.Create)
 	}
 
 	clientAPI := router.Group("/api/v1")
 	clientAPI.Use(middleware.RequireRole(cfg.Auth.JWTSecret, "BUYER", "STAFF", "ADMIN"))
 	{
-		clientAPI.POST("/orders", orderHandler.Create)
 		clientAPI.GET("/orders", orderHandler.ListMyOrders)
 	}
 

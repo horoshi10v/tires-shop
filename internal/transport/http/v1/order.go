@@ -27,11 +27,15 @@ type telegramWebhookUpdate struct {
 }
 
 type OrderHandler struct {
-	service domain.OrderService
+	service         domain.OrderService
+	guestOrderGuard *guestOrderGuard
 }
 
 func NewOrderHandler(service domain.OrderService) *OrderHandler {
-	return &OrderHandler{service: service}
+	return &OrderHandler{
+		service:         service,
+		guestOrderGuard: newGuestOrderGuard(),
+	}
 }
 
 // Create handles the HTTP request to create an order.
@@ -64,6 +68,13 @@ func (h *OrderHandler) Create(c *gin.Context) {
 	if val, exists := c.Get("userID"); exists {
 		if id, ok := val.(uuid.UUID); ok {
 			userID = &id
+		}
+	}
+
+	if userID == nil {
+		if err := h.guestOrderGuard.Check(c, req); err != nil {
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": err.Error()})
+			return
 		}
 	}
 

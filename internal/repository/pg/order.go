@@ -25,6 +25,16 @@ func NewOrderRepository(db *gorm.DB) domain.OrderRepository {
 
 // CreateOrderTx executes order creation and lot deduction atomically.
 func (r *OrderRepo) CreateOrderTx(ctx context.Context, dto domain.CreateOrderDTO, userID *uuid.UUID) (uuid.UUID, error) {
+	mapOrderAnalyticsSource := func(dto domain.CreateOrderDTO) string {
+		if dto.Channel == domain.OrderChannelOffline {
+			return string(domain.LotAnalyticsSourceStaff)
+		}
+		if dto.CustomerTelegramID != nil && *dto.CustomerTelegramID != 0 {
+			return string(domain.LotAnalyticsSourceTMA)
+		}
+		return string(domain.LotAnalyticsSourceWeb)
+	}
+
 	var orderID uuid.UUID
 
 	// Start a database transaction
@@ -99,6 +109,22 @@ func (r *OrderRepo) CreateOrderTx(ctx context.Context, dto domain.CreateOrderDTO
 		}
 
 		orderID = order.ID
+
+		analyticsEvents := make([]models.LotAnalyticsEvent, 0, len(orderItems))
+		analyticsSource := mapOrderAnalyticsSource(dto)
+		for _, item := range orderItems {
+			analyticsEvents = append(analyticsEvents, models.LotAnalyticsEvent{
+				LotID:     item.LotID,
+				EventType: string(domain.LotAnalyticsEventOrderCreated),
+				Source:    analyticsSource,
+			})
+		}
+		if len(analyticsEvents) > 0 {
+			if err := tx.Create(&analyticsEvents).Error; err != nil {
+				return fmt.Errorf("failed to create lot analytics order events: %w", err)
+			}
+		}
+
 		return nil // Return nil to COMMIT the transaction
 	})
 

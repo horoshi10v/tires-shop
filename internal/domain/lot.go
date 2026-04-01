@@ -160,6 +160,7 @@ type LotRepository interface {
 	ListInternal(ctx context.Context, filter LotFilter) ([]LotInternalResponse, int64, error)
 	ListSuggestions(ctx context.Context, filter LotFilter, internal bool, limit int) ([]string, error)
 	TrackSuggestionSelection(ctx context.Context, suggestion string, internal bool) error
+	TrackAnalyticsEvent(ctx context.Context, req TrackLotAnalyticsEventRequest, userAgent string) error
 }
 
 // LotService defines business logic operations for the Lot entity.
@@ -173,5 +174,6 @@ type LotService interface {
 	ListInternalSuggestions(ctx context.Context, filter LotFilter, limit int) ([]string, error)
 	TrackPublicSuggestionSelection(ctx context.Context, suggestion string) error
 	TrackInternalSuggestionSelection(ctx context.Context, suggestion string) error
+	TrackLotAnalyticsEvent(ctx context.Context, req TrackLotAnalyticsEventRequest, userAgent string) error
 	GenerateLotQR(ctx context.Context, id uuid.UUID) ([]byte, error)
 }

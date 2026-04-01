@@ -45,6 +45,18 @@ func (h *ReportHandler) GetPnL(c *gin.Context) {
 	c.JSON(http.StatusOK, report)
 }
 
+func (h *ReportHandler) GetLotAnalytics(c *gin.Context) {
+	filter := buildReportFilter(c)
+
+	report, err := h.service.GetLotAnalyticsReport(c.Request.Context(), filter)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate lot analytics report"})
+		return
+	}
+
+	c.JSON(http.StatusOK, report)
+}
+
 func buildReportFilter(c *gin.Context) domain.ReportFilter {
 	var startDate *time.Time
 	if val := c.Query("start_date"); val != "" {

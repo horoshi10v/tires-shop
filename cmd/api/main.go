@@ -70,6 +70,7 @@ func main() {
 		&models.Transfer{},
 		&models.TransferItem{},
 		&models.SearchSuggestionStat{},
+		&models.LotAnalyticsEvent{},
 	); err != nil {
 		log.Error("migration failed", slog.String("error", err.Error()))
 		os.Exit(1)
@@ -189,6 +190,7 @@ func main() {
 		publicAPI.GET("/lots", lotHandler.ListPublic)
 		publicAPI.GET("/lots/suggestions", lotHandler.ListPublicSuggestions)
 		publicAPI.POST("/lots/suggestions/track", lotHandler.TrackPublicSuggestionSelection)
+		publicAPI.POST("/lots/analytics/events", lotHandler.TrackPublicAnalyticsEvent)
 		publicAPI.POST("/auth/telegram", authHandler.LoginTelegram)
 		publicAPI.POST("/telegram/client/webhook", orderHandler.HandleClientBotWebhook)
 		publicAPI.POST("/orders", middleware.OptionalAuth(cfg.Auth.JWTSecret), orderHandler.Create)
@@ -230,6 +232,7 @@ func main() {
 	adminAPI.Use(middleware.RequireRole(cfg.Auth.JWTSecret, "ADMIN"))
 	{
 		adminAPI.GET("/reports/pnl", reportHandler.GetPnL)
+		adminAPI.GET("/reports/lots/analytics", reportHandler.GetLotAnalytics)
 		adminAPI.POST("/warehouses", warehouseHandler.Create)
 		adminAPI.PUT("/warehouses/:id", warehouseHandler.Update)
 		adminAPI.DELETE("/warehouses/:id", warehouseHandler.Delete)

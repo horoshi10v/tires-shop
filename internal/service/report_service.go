@@ -21,3 +21,8 @@ func (s *reportService) GetPnLReport(ctx context.Context, filter domain.ReportFi
 	s.logger.Info("generating P&L report")
 	return s.repo.GetPnL(ctx, filter)
 }
+
+func (s *reportService) GetLotAnalyticsReport(ctx context.Context, filter domain.ReportFilter) (*domain.LotAnalyticsReport, error) {
+	s.logger.Info("generating lot analytics report")
+	return s.repo.GetLotAnalytics(ctx, filter)
+}

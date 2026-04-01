@@ -12,12 +12,20 @@ type OrderItemDTO struct {
 	Quantity int       `json:"quantity" binding:"required,gt=0"`
 }
 
+type OrderChannel string
+
+const (
+	OrderChannelOnline  OrderChannel = "ONLINE"
+	OrderChannelOffline OrderChannel = "OFFLINE"
+)
+
 // CreateOrderDTO contains data required to create a new order.
 type CreateOrderDTO struct {
 	CustomerName       string         `json:"customer_name" binding:"required"`
-	CustomerPhone      string         `json:"customer_phone" binding:"required"`
+	CustomerPhone      string         `json:"customer_phone"`
 	CustomerUsername   string         `json:"customer_username"`    // Optional
 	CustomerTelegramID *int64         `json:"customer_telegram_id"` // Optional
+	Channel            OrderChannel   `json:"channel,omitempty"`
 	Items              []OrderItemDTO `json:"items" binding:"required,min=1"`
 }
 
@@ -70,6 +78,7 @@ type OrderFilter struct {
 	Page     int
 	PageSize int
 	Status   string
+	Channel  OrderChannel
 	Customer string // Search by name or phone
 }
 
@@ -80,6 +89,7 @@ type OrderResponse struct {
 	CustomerPhone      string              `json:"customer_phone"`
 	CustomerUsername   string              `json:"customer_username,omitempty"`
 	CustomerTelegramID *int64              `json:"customer_telegram_id,omitempty"`
+	Channel            OrderChannel        `json:"channel"`
 	Status             string              `json:"status"`
 	TotalAmount        float64             `json:"total_amount"`
 	CreatedAt          string              `json:"created_at"`

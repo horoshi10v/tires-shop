@@ -35,7 +35,16 @@ func NewOrderService(
 }
 
 func (s *orderService) CreateOrder(ctx context.Context, dto domain.CreateOrderDTO, userID *uuid.UUID) (uuid.UUID, error) {
-	s.logger.Info("processing new order", slog.String("customer", dto.CustomerName))
+	if dto.Channel == "" {
+		dto.Channel = domain.OrderChannelOnline
+	}
+	if dto.Channel != domain.OrderChannelOnline && dto.Channel != domain.OrderChannelOffline {
+		return uuid.Nil, fmt.Errorf("invalid order channel")
+	}
+	if dto.Channel != domain.OrderChannelOffline && dto.CustomerPhone == "" {
+		return uuid.Nil, fmt.Errorf("customer_phone is required for online orders")
+	}
+	s.logger.Info("processing new order", slog.String("customer", dto.CustomerName), slog.String("channel", string(dto.Channel)))
 
 	orderID, err := s.repo.CreateOrderTx(ctx, dto, userID)
 	if err != nil {

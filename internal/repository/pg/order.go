@@ -83,11 +83,12 @@ func (r *OrderRepo) CreateOrderTx(ctx context.Context, dto domain.CreateOrderDTO
 
 		// 6. Create the main Order record
 		order := models.Order{
-			UserID:             userID, // Link to user if provided
+			UserID:             userID,
 			CustomerName:       dto.CustomerName,
 			CustomerPhone:      dto.CustomerPhone,
 			CustomerUsername:   dto.CustomerUsername,
 			CustomerTelegramID: dto.CustomerTelegramID,
+			Channel:            string(dto.Channel),
 			Status:             "NEW",
 			TotalAmount:        totalAmount,
 			Items:              orderItems, // GORM will automatically insert these related items
@@ -208,6 +209,7 @@ func (r *OrderRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.OrderRes
 		CustomerPhone:      order.CustomerPhone,
 		CustomerUsername:   order.CustomerUsername,
 		CustomerTelegramID: order.CustomerTelegramID,
+		Channel:            domain.OrderChannel(order.Channel),
 		Status:             order.Status,
 		TotalAmount:        order.TotalAmount,
 		CreatedAt:          order.CreatedAt.Format("2006-01-02 15:04:05"),
@@ -301,6 +303,9 @@ func (r *OrderRepo) List(ctx context.Context, filter domain.OrderFilter) ([]doma
 	if filter.Status != "" {
 		query = query.Where("status = ?", filter.Status)
 	}
+	if filter.Channel != "" {
+		query = query.Where("channel = ?", string(filter.Channel))
+	}
 	if filter.Customer != "" {
 		query = query.Where("customer_name ILIKE ? OR customer_phone ILIKE ?", "%"+filter.Customer+"%", "%"+filter.Customer+"%")
 	}
@@ -335,6 +340,7 @@ func (r *OrderRepo) List(ctx context.Context, filter domain.OrderFilter) ([]doma
 			CustomerPhone:      order.CustomerPhone,
 			CustomerUsername:   order.CustomerUsername,
 			CustomerTelegramID: order.CustomerTelegramID,
+			Channel:            domain.OrderChannel(order.Channel),
 			Status:             order.Status,
 			TotalAmount:        order.TotalAmount,
 			CreatedAt:          order.CreatedAt.Format("2006-01-02 15:04:05"),
@@ -386,6 +392,7 @@ func (r *OrderRepo) ListByUserID(ctx context.Context, userID uuid.UUID, filter d
 			CustomerPhone:      order.CustomerPhone,
 			CustomerUsername:   order.CustomerUsername,
 			CustomerTelegramID: order.CustomerTelegramID,
+			Channel:            domain.OrderChannel(order.Channel),
 			Status:             order.Status,
 			TotalAmount:        order.TotalAmount,
 			CreatedAt:          order.CreatedAt.Format("2006-01-02 15:04:05"),

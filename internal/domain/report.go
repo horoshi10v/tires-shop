@@ -14,6 +14,7 @@ type PnLReport struct {
 	TotalCOGS      float64        `json:"total_cogs"`
 	TotalProfit    float64        `json:"total_profit"`
 	ByWarehouse    []WarehousePnL `json:"by_warehouse"`
+	ByChannel      []ChannelPnL   `json:"by_channel"`
 }
 
 // ReportFilter defines criteria for filtering reports.
@@ -21,6 +22,7 @@ type ReportFilter struct {
 	StartDate   *time.Time
 	EndDate     *time.Time
 	WarehouseID *uuid.UUID
+	Channel     *OrderChannel
 }
 
 // ReportRepository handles analytical database queries.
@@ -40,4 +42,13 @@ type WarehousePnL struct {
 	Revenue       float64 `json:"revenue"`
 	COGS          float64 `json:"cogs"`
 	Profit        float64 `json:"profit"`
+}
+
+// ChannelPnL contains financial metrics grouped by sales channel.
+type ChannelPnL struct {
+	Channel   OrderChannel `json:"channel"`
+	ItemsSold int          `json:"items_sold"`
+	Revenue   float64      `json:"revenue"`
+	COGS      float64      `json:"cogs"`
+	Profit    float64      `json:"profit"`
 }

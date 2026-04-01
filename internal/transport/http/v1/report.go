@@ -28,6 +28,7 @@ func NewReportHandler(service domain.ReportService) *ReportHandler {
 //	@Param        start_date    query     string  false  "Start Date (YYYY-MM-DD)"
 //	@Param        end_date      query     string  false  "End Date (YYYY-MM-DD)"
 //	@Param        warehouse_id  query     string  false  "Filter by Warehouse ID"
+//	@Param        channel       query     string  false  "Filter by sales channel (ONLINE|OFFLINE)"
 //	@Success      200  {object}  domain.PnLReport
 //	@Failure      401  {object}  map[string]string "Unauthorized"
 //	@Failure      403  {object}  map[string]string "Forbidden"
@@ -68,9 +69,16 @@ func buildReportFilter(c *gin.Context) domain.ReportFilter {
 		}
 	}
 
+	var channel *domain.OrderChannel
+	if val := c.Query("channel"); val != "" {
+		parsed := domain.OrderChannel(val)
+		channel = &parsed
+	}
+
 	return domain.ReportFilter{
 		StartDate:   startDate,
 		EndDate:     endDate,
 		WarehouseID: warehouseID,
+		Channel:     channel,
 	}
 }

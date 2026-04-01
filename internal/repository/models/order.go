@@ -10,8 +10,9 @@ type Order struct {
 	UserID             *uuid.UUID `gorm:"type:uuid;index"` // Nullable for guest orders, but currently all are auth'd
 	CustomerName       string     `gorm:"type:varchar(100)"`
 	CustomerPhone      string     `gorm:"type:varchar(20);index"`
-	CustomerUsername   string     `gorm:"type:varchar(100);index"`              // Added for Telegram integration
-	CustomerTelegramID *int64     `gorm:"index"`                                // Added for Telegram integration
+	CustomerUsername   string     `gorm:"type:varchar(100);index"`
+	CustomerTelegramID *int64     `gorm:"index"`
+	Channel            string     `gorm:"type:varchar(20);default:'ONLINE';index"`
 	Status             string     `gorm:"type:varchar(20);default:'NEW';index"` // NEW, PREPAYMENT, DONE, CANCELLED
 	TotalAmount        float64    `gorm:"not null"`
 

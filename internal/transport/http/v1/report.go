@@ -2,6 +2,7 @@ package v1
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -87,10 +88,70 @@ func buildReportFilter(c *gin.Context) domain.ReportFilter {
 		channel = &parsed
 	}
 
+	var lotID *uuid.UUID
+	if val := c.Query("lot_id"); val != "" {
+		if id, err := uuid.Parse(val); err == nil {
+			lotID = &id
+		}
+	}
+
+	var lotType *string
+	if val := c.Query("type"); val != "" {
+		lotType = &val
+	}
+
+	var brand *string
+	if val := c.Query("brand"); val != "" {
+		brand = &val
+	}
+
+	var model *string
+	if val := c.Query("model"); val != "" {
+		model = &val
+	}
+
+	var condition *string
+	if val := c.Query("condition"); val != "" {
+		condition = &val
+	}
+
+	var source *domain.LotAnalyticsSource
+	if val := c.Query("source"); val != "" {
+		parsed := domain.LotAnalyticsSource(val)
+		source = &parsed
+	}
+
+	groupBy := domain.LotAnalyticsGroupByDay
+	if val := c.Query("group_by"); val != "" {
+		parsed := domain.LotAnalyticsGroupBy(val)
+		switch parsed {
+		case domain.LotAnalyticsGroupByDay, domain.LotAnalyticsGroupByWeek, domain.LotAnalyticsGroupByMonth:
+			groupBy = parsed
+		}
+	}
+
+	topLimit := 10
+	if val := c.Query("top_limit"); val != "" {
+		if parsed, err := strconv.Atoi(val); err == nil {
+			switch parsed {
+			case 10, 25, 50:
+				topLimit = parsed
+			}
+		}
+	}
+
 	return domain.ReportFilter{
 		StartDate:   startDate,
 		EndDate:     endDate,
 		WarehouseID: warehouseID,
 		Channel:     channel,
+		LotID:       lotID,
+		Type:        lotType,
+		Brand:       brand,
+		Model:       model,
+		Condition:   condition,
+		Source:      source,
+		GroupBy:     groupBy,
+		TopLimit:    topLimit,
 	}
 }

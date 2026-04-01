@@ -7,6 +7,14 @@ import (
 	"github.com/google/uuid"
 )
 
+type LotAnalyticsGroupBy string
+
+const (
+	LotAnalyticsGroupByDay   LotAnalyticsGroupBy = "DAY"
+	LotAnalyticsGroupByWeek  LotAnalyticsGroupBy = "WEEK"
+	LotAnalyticsGroupByMonth LotAnalyticsGroupBy = "MONTH"
+)
+
 // PnLReport represents the Profit and Loss financial data.
 type PnLReport struct {
 	TotalItemsSold int            `json:"total_items_sold"`
@@ -44,6 +52,7 @@ type LotAnalyticsLotRow struct {
 }
 
 type LotAnalyticsReport struct {
+	GroupBy       LotAnalyticsGroupBy      `json:"group_by"`
 	Totals        LotAnalyticsTotals       `json:"totals"`
 	Daily         []LotAnalyticsDailyPoint `json:"daily"`
 	TopViewed     []LotAnalyticsLotRow     `json:"top_viewed"`
@@ -59,7 +68,12 @@ type ReportFilter struct {
 	Channel     *OrderChannel
 	LotID       *uuid.UUID
 	Type        *string
+	Brand       *string
+	Model       *string
+	Condition   *string
 	Source      *LotAnalyticsSource
+	GroupBy     LotAnalyticsGroupBy
+	TopLimit    int
 }
 
 // ReportRepository handles analytical database queries.

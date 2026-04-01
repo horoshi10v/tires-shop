@@ -19,7 +19,7 @@ func NewReportRepository(db *gorm.DB) domain.ReportRepository {
 
 func buildAnalyticsConditions(filter domain.ReportFilter) (string, []interface{}) {
 	conditions := []string{"lae.deleted_at IS NULL", "l.deleted_at IS NULL"}
-	args := make([]interface{}, 0, 4)
+	args := make([]interface{}, 0, 8)
 
 	if filter.StartDate != nil {
 		conditions = append(conditions, "lae.created_at >= ?")
@@ -41,12 +41,35 @@ func buildAnalyticsConditions(filter domain.ReportFilter) (string, []interface{}
 		conditions = append(conditions, "l.type = ?")
 		args = append(args, *filter.Type)
 	}
+	if filter.Brand != nil && *filter.Brand != "" {
+		conditions = append(conditions, "l.brand ILIKE ?")
+		args = append(args, "%"+*filter.Brand+"%")
+	}
+	if filter.Model != nil && *filter.Model != "" {
+		conditions = append(conditions, "l.model ILIKE ?")
+		args = append(args, "%"+*filter.Model+"%")
+	}
+	if filter.Condition != nil && *filter.Condition != "" {
+		conditions = append(conditions, "l.condition = ?")
+		args = append(args, *filter.Condition)
+	}
 	if filter.Source != nil && *filter.Source != "" {
 		conditions = append(conditions, "lae.source = ?")
 		args = append(args, string(*filter.Source))
 	}
 
 	return strings.Join(conditions, " AND "), args
+}
+
+func buildAnalyticsGrouping(groupBy domain.LotAnalyticsGroupBy) (string, string) {
+	switch groupBy {
+	case domain.LotAnalyticsGroupByWeek:
+		return "DATE_TRUNC('week', lae.created_at)", "TO_CHAR(DATE_TRUNC('week', lae.created_at), 'IYYY-\"W\"IW')"
+	case domain.LotAnalyticsGroupByMonth:
+		return "DATE_TRUNC('month', lae.created_at)", "TO_CHAR(DATE_TRUNC('month', lae.created_at), 'YYYY-MM')"
+	default:
+		return "DATE(lae.created_at)", "TO_CHAR(DATE(lae.created_at), 'YYYY-MM-DD')"
+	}
 }
 
 // GetPnL executes a raw SQL query to calculate financials.
@@ -156,6 +179,7 @@ func (r *ReportRepo) GetPnL(ctx context.Context, filter domain.ReportFilter) (*d
 
 func (r *ReportRepo) GetLotAnalytics(ctx context.Context, filter domain.ReportFilter) (*domain.LotAnalyticsReport, error) {
 	analyticsConditions, analyticsArgs := buildAnalyticsConditions(filter)
+	groupExpr, groupLabelExpr := buildAnalyticsGrouping(filter.GroupBy)
 
 	var totals domain.LotAnalyticsTotals
 	totalsQuery := `
@@ -177,15 +201,15 @@ func (r *ReportRepo) GetLotAnalytics(ctx context.Context, filter domain.ReportFi
 	var daily []domain.LotAnalyticsDailyPoint
 	dailyQuery := `
 		SELECT
-			TO_CHAR(DATE(lae.created_at), 'YYYY-MM-DD') AS date,
+			` + groupLabelExpr + ` AS date,
 			COALESCE(SUM(CASE WHEN lae.event_type = 'VIEW' THEN 1 ELSE 0 END), 0) AS views,
 			COALESCE(SUM(CASE WHEN lae.event_type = 'FAVORITE_ADD' THEN 1 ELSE 0 END), 0) AS favorites_added,
 			COALESCE(SUM(CASE WHEN lae.event_type = 'ORDER_CREATED' THEN 1 ELSE 0 END), 0) AS orders_created
 		FROM lot_analytics_events lae
 		JOIN lots l ON l.id = lae.lot_id
 		WHERE ` + analyticsConditions + `
-		GROUP BY DATE(lae.created_at)
-		ORDER BY DATE(lae.created_at) ASC
+		GROUP BY ` + groupExpr + `
+		ORDER BY ` + groupExpr + ` ASC
 	`
 	if err := r.db.WithContext(ctx).Raw(dailyQuery, analyticsArgs...).Scan(&daily).Error; err != nil {
 		return nil, err
@@ -213,10 +237,16 @@ func (r *ReportRepo) GetLotAnalytics(ctx context.Context, filter domain.ReportFi
 		GROUP BY lae.lot_id, l.brand, l.model, l.type, l.condition
 	`
 
+	topLimit := filter.TopLimit
+	if topLimit <= 0 {
+		topLimit = 10
+	}
+
 	loadRows := func(orderBy string) ([]domain.LotAnalyticsLotRow, error) {
 		var rows []domain.LotAnalyticsLotRow
-		query := rowSelect + ` ORDER BY ` + orderBy + ` LIMIT 10`
-		if err := r.db.WithContext(ctx).Raw(query, analyticsArgs...).Scan(&rows).Error; err != nil {
+		query := rowSelect + ` ORDER BY ` + orderBy + ` LIMIT ?`
+		rowArgs := append(append([]interface{}{}, analyticsArgs...), topLimit)
+		if err := r.db.WithContext(ctx).Raw(query, rowArgs...).Scan(&rows).Error; err != nil {
 			return nil, err
 		}
 		return rows, nil
@@ -235,7 +265,13 @@ func (r *ReportRepo) GetLotAnalytics(ctx context.Context, filter domain.ReportFi
 		return nil, err
 	}
 
+	groupBy := filter.GroupBy
+	if groupBy == "" {
+		groupBy = domain.LotAnalyticsGroupByDay
+	}
+
 	return &domain.LotAnalyticsReport{
+		GroupBy:       groupBy,
 		Totals:        totals,
 		Daily:         daily,
 		TopViewed:     topViewed,

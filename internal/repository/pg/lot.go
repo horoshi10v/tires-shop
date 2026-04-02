@@ -703,6 +703,9 @@ func applyFilters(query *gorm.DB, filter domain.LotFilter) *gorm.DB {
 	if filter.Season != "" {
 		query = query.Where("params->>'season' = ?", filter.Season)
 	}
+	if filter.TireTerrain != "" {
+		query = query.Where("params->>'tire_terrain' = ?", filter.TireTerrain)
+	}
 	if filter.AccessoryCategory != "" {
 		query = query.Where("params->>'accessory_category' = ?", filter.AccessoryCategory)
 	}
@@ -743,6 +746,13 @@ func applyFilters(query *gorm.DB, filter domain.LotFilter) *gorm.DB {
 			val = "true"
 		}
 		query = query.Where("params->>'is_spiked' = ?", val)
+	}
+	if filter.IsCType != nil {
+		val := "false"
+		if *filter.IsCType {
+			val = "true"
+		}
+		query = query.Where("params->>'is_c_type' = ?", val)
 	}
 	if filter.AntiPuncture != nil {
 		val := "false"

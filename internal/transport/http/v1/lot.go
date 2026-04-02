@@ -271,6 +271,12 @@ func buildLotFilter(c *gin.Context) domain.LotFilter {
 		isSpiked = &b
 	}
 
+	var isCType *bool
+	if val := c.Query("is_c_type"); val != "" {
+		b, _ := strconv.ParseBool(val)
+		isCType = &b
+	}
+
 	var antiPuncture *bool
 	if val := c.Query("anti_puncture"); val != "" {
 		b, _ := strconv.ParseBool(val)
@@ -308,10 +314,12 @@ func buildLotFilter(c *gin.Context) domain.LotFilter {
 		ProductionYear:    productionYear,
 		CountryOfOrigin:   c.Query("country_of_origin"),
 		Season:            c.Query("season"),
+		TireTerrain:       c.Query("tire_terrain"),
 		Condition:         c.Query("condition"),
 		Model:             c.Query("model"),
 		IsRunFlat:         isRunFlat,
 		IsSpiked:          isSpiked,
+		IsCType:           isCType,
 		AntiPuncture:      antiPuncture,
 		CurrentQuantity:   currentQuantity,
 		SellPrice:         sellPrice,

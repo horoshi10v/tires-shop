@@ -26,9 +26,11 @@ type LotParams struct {
 	ProductionYear    int     `json:"production_year,omitempty"`
 	RimMaterial       string  `json:"rim_material,omitempty"`
 	CountryOfOrigin   string  `json:"country_of_origin,omitempty"`
-	Season            string  `json:"season,omitempty"` // SUMMER, WINTER, ALL_SEASON
+	Season            string  `json:"season,omitempty"`       // SUMMER, WINTER, ALL_SEASON
+	TireTerrain       string  `json:"tire_terrain,omitempty"` // AT, MT
 	IsRunFlat         bool    `json:"is_run_flat"`
 	IsSpiked          bool    `json:"is_spiked"`
+	IsCType           bool    `json:"is_c_type"`
 	AntiPuncture      bool    `json:"anti_puncture"`
 	AccessoryCategory string  `json:"accessory_category,omitempty"` // FASTENERS, HUB_RINGS, SPACERS, TIRE_BAGS
 	FastenerType      string  `json:"fastener_type,omitempty"`      // NUT, BOLT
@@ -90,9 +92,11 @@ type LotFilter struct {
 	ProductionYear  int
 	CountryOfOrigin string
 	Season          string
+	TireTerrain     string
 
 	IsRunFlat    *bool
 	IsSpiked     *bool
+	IsCType      *bool
 	AntiPuncture *bool
 
 	Condition         string

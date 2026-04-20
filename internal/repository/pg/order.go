@@ -77,18 +77,23 @@ func (r *OrderRepo) CreateOrderTx(ctx context.Context, dto domain.CreateOrderDTO
 				photo = lot.Photos[0]
 			}
 
+			priceAtMoment := lot.SellPrice
+			if dto.Channel == domain.OrderChannelOffline && item.FinalPrice != nil {
+				priceAtMoment = *item.FinalPrice
+			}
+
 			orderItems = append(orderItems, models.OrderItem{
 				LotID:         lot.ID,
 				Brand:         lot.Brand,
 				Model:         lot.Model,
 				Photo:         photo,
 				Quantity:      item.Quantity,
-				PriceAtMoment: lot.SellPrice,
+				PriceAtMoment: priceAtMoment,
 				CostAtMoment:  lot.PurchasePrice, // Saved securely for P&L reports
 			})
 
 			// 5. Accumulate total order amount
-			totalAmount += lot.SellPrice * float64(item.Quantity)
+			totalAmount += priceAtMoment * float64(item.Quantity)
 		}
 
 		// 6. Create the main Order record
@@ -210,6 +215,77 @@ func (r *OrderRepo) UpdateStatus(ctx context.Context, id uuid.UUID, newStatus st
 	})
 }
 
+func (r *OrderRepo) UpdateItemPrice(ctx context.Context, orderID, itemID, userID uuid.UUID, price float64, comment string) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var order models.Order
+		if err := tx.Preload("Items").Clauses(clause.Locking{Strength: "UPDATE"}).First(&order, "id = ?", orderID).Error; err != nil {
+			return fmt.Errorf("order not found or locked: %w", err)
+		}
+
+		if order.Channel != string(domain.OrderChannelOffline) {
+			return fmt.Errorf("price override is allowed only for offline orders")
+		}
+		if order.Status == "CANCELLED" {
+			return fmt.Errorf("cannot change price for a cancelled order")
+		}
+
+		var orderItem models.OrderItem
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			First(&orderItem, "id = ? AND order_id = ?", itemID, orderID).Error; err != nil {
+			return fmt.Errorf("order item not found: %w", err)
+		}
+
+		oldPrice := orderItem.PriceAtMoment
+		if oldPrice == price {
+			return nil
+		}
+
+		orderItem.PriceAtMoment = price
+		if err := tx.Save(&orderItem).Error; err != nil {
+			return fmt.Errorf("failed to update order item price: %w", err)
+		}
+
+		var totalAmount float64
+		for _, item := range order.Items {
+			itemPrice := item.PriceAtMoment
+			if item.ID == orderItem.ID {
+				itemPrice = price
+			}
+			totalAmount += itemPrice * float64(item.Quantity)
+		}
+
+		order.TotalAmount = totalAmount
+		if err := tx.Save(&order).Error; err != nil {
+			return fmt.Errorf("failed to update order total amount: %w", err)
+		}
+
+		oldVal, _ := json.Marshal(map[string]interface{}{
+			"order_item_id": itemID.String(),
+			"price":         oldPrice,
+		})
+		newVal, _ := json.Marshal(map[string]interface{}{
+			"order_item_id": itemID.String(),
+			"price":         price,
+		})
+
+		auditLog := models.AuditLog{
+			Entity:   "ORDER",
+			EntityID: order.ID,
+			UserID:   userID,
+			Action:   "ITEM_PRICE_CHANGED",
+			OldValue: datatypes.JSON(oldVal),
+			NewValue: datatypes.JSON(newVal),
+			Comment:  comment,
+		}
+
+		if err := tx.Create(&auditLog).Error; err != nil {
+			return fmt.Errorf("failed to write audit log: %w", err)
+		}
+
+		return nil
+	})
+}
+
 func (r *OrderRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.OrderResponse, error) {
 	var order models.Order
 	if err := r.db.WithContext(ctx).Preload("Items").First(&order, "id = ?", id).Error; err != nil {
@@ -219,6 +295,7 @@ func (r *OrderRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.OrderRes
 	var items []domain.OrderItemResponse
 	for _, item := range order.Items {
 		items = append(items, domain.OrderItemResponse{
+			ID:       item.ID,
 			LotID:    item.LotID,
 			Brand:    item.Brand,
 			Model:    item.Model,
@@ -350,6 +427,7 @@ func (r *OrderRepo) List(ctx context.Context, filter domain.OrderFilter) ([]doma
 		var items []domain.OrderItemResponse
 		for _, item := range order.Items {
 			items = append(items, domain.OrderItemResponse{
+				ID:       item.ID,
 				LotID:    item.LotID,
 				Brand:    item.Brand,
 				Model:    item.Model,
@@ -402,6 +480,7 @@ func (r *OrderRepo) ListByUserID(ctx context.Context, userID uuid.UUID, filter d
 		var items []domain.OrderItemResponse
 		for _, item := range order.Items {
 			items = append(items, domain.OrderItemResponse{
+				ID:       item.ID,
 				LotID:    item.LotID,
 				Brand:    item.Brand,
 				Model:    item.Model,

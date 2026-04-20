@@ -140,6 +140,46 @@ func (h *OrderHandler) UpdateStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "order status updated and logged"})
 }
 
+func (h *OrderHandler) UpdateItemPrice(c *gin.Context) {
+	orderID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid order id format"})
+		return
+	}
+
+	itemID, err := uuid.Parse(c.Param("itemId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid order item id format"})
+		return
+	}
+
+	var req domain.UpdateOrderItemPriceDTO
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userIDVal, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user identification missing"})
+		return
+	}
+	userID := userIDVal.(uuid.UUID)
+
+	if err := h.service.UpdateOrderItemPrice(c.Request.Context(), orderID, itemID, userID, req.Price, req.Comment); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	order, err := h.service.GetOrderByID(c.Request.Context(), orderID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "price updated but failed to fetch order"})
+		return
+	}
+
+	c.JSON(http.StatusOK, order)
+}
+
 // SendMessage sends a direct Telegram bot message to the order customer.
 //
 //	@Summary      Send Order Message

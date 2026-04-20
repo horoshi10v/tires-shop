@@ -8,8 +8,9 @@ import (
 
 // OrderItemDTO represents a single lot in the order request.
 type OrderItemDTO struct {
-	LotID    uuid.UUID `json:"lot_id" binding:"required"`
-	Quantity int       `json:"quantity" binding:"required,gt=0"`
+	LotID      uuid.UUID `json:"lot_id" binding:"required"`
+	Quantity   int       `json:"quantity" binding:"required,gt=0"`
+	FinalPrice *float64  `json:"final_price,omitempty" binding:"omitempty,gt=0"`
 }
 
 type OrderChannel string
@@ -33,6 +34,11 @@ type CreateOrderDTO struct {
 type UpdateOrderStatusDTO struct {
 	Status  string `json:"status" binding:"required,oneof=NEW PREPAYMENT DONE CANCELLED"`
 	Comment string `json:"comment"`
+}
+
+type UpdateOrderItemPriceDTO struct {
+	Price   float64 `json:"price" binding:"required,gt=0"`
+	Comment string  `json:"comment"`
 }
 
 type SendOrderMessageDTO struct {
@@ -98,6 +104,7 @@ type OrderResponse struct {
 
 // OrderItemResponse represents a single item in the order response.
 type OrderItemResponse struct {
+	ID       uuid.UUID `json:"id"`
 	LotID    uuid.UUID `json:"lot_id"`
 	Brand    string    `json:"brand,omitempty"`
 	Model    string    `json:"model,omitempty"`
@@ -111,6 +118,7 @@ type OrderItemResponse struct {
 type OrderRepository interface {
 	CreateOrderTx(ctx context.Context, dto CreateOrderDTO, userID *uuid.UUID) (uuid.UUID, error)
 	UpdateStatus(ctx context.Context, id uuid.UUID, status string, userID uuid.UUID, comment string) error
+	UpdateItemPrice(ctx context.Context, orderID, itemID, userID uuid.UUID, price float64, comment string) error
 	GetByID(ctx context.Context, id uuid.UUID) (*OrderResponse, error)
 	CreateMessage(ctx context.Context, dto CreateOrderMessageDTO) (*OrderMessage, error)
 	ListMessages(ctx context.Context, orderID uuid.UUID) ([]OrderMessage, error)
@@ -123,6 +131,7 @@ type OrderRepository interface {
 type OrderService interface {
 	CreateOrder(ctx context.Context, dto CreateOrderDTO, userID *uuid.UUID) (uuid.UUID, error)
 	UpdateOrderStatus(ctx context.Context, id uuid.UUID, status string, userID uuid.UUID, comment string) error
+	UpdateOrderItemPrice(ctx context.Context, orderID, itemID, userID uuid.UUID, price float64, comment string) error
 	SendOrderMessage(ctx context.Context, id uuid.UUID, message string) error
 	ListOrderMessages(ctx context.Context, id uuid.UUID) ([]OrderMessage, error)
 	ProcessInboundMessage(ctx context.Context, dto InboundOrderMessageDTO) error

@@ -215,6 +215,7 @@ func main() {
 		staffAPI.GET("/lots/:id/qr", lotHandler.GetQR)
 		staffAPI.GET("/orders", orderHandler.List)
 		staffAPI.PATCH("/orders/:id/status", orderHandler.UpdateStatus)
+		staffAPI.PATCH("/orders/:id/items/:itemId/price", orderHandler.UpdateItemPrice)
 		staffAPI.POST("/orders/:id/message", orderHandler.SendMessage)
 		staffAPI.GET("/orders/:id/messages", orderHandler.ListMessages)
 		staffAPI.GET("/transfers", transferHandler.List)

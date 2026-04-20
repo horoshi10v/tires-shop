@@ -41,6 +41,13 @@ func (s *orderService) CreateOrder(ctx context.Context, dto domain.CreateOrderDT
 	if dto.Channel != domain.OrderChannelOnline && dto.Channel != domain.OrderChannelOffline {
 		return uuid.Nil, fmt.Errorf("invalid order channel")
 	}
+	if dto.Channel != domain.OrderChannelOffline {
+		for _, item := range dto.Items {
+			if item.FinalPrice != nil {
+				return uuid.Nil, fmt.Errorf("final_price is allowed only for offline orders")
+			}
+		}
+	}
 	if dto.Channel != domain.OrderChannelOffline && dto.CustomerPhone == "" {
 		return uuid.Nil, fmt.Errorf("customer_phone is required for online orders")
 	}
@@ -78,6 +85,24 @@ func (s *orderService) UpdateOrderStatus(ctx context.Context, id uuid.UUID, stat
 	}
 
 	msg := fmt.Sprintf("🔄 Статус замовлення %s змінен на: %s. Коментарій: %s", id.String(), status, comment)
+	s.notifier.SendAlert(msg)
+
+	return nil
+}
+
+func (s *orderService) UpdateOrderItemPrice(ctx context.Context, orderID, itemID, userID uuid.UUID, price float64, comment string) error {
+	s.logger.Info(
+		"updating order item price",
+		slog.String("order_id", orderID.String()),
+		slog.String("item_id", itemID.String()),
+		slog.Float64("price", price),
+	)
+
+	if err := s.repo.UpdateItemPrice(ctx, orderID, itemID, userID, price, comment); err != nil {
+		return err
+	}
+
+	msg := fmt.Sprintf("💸 Ціну позиції у замовленні %s змінено на %.2f. Коментарій: %s", orderID.String(), price, comment)
 	s.notifier.SendAlert(msg)
 
 	return nil

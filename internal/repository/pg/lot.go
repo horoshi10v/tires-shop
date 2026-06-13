@@ -715,8 +715,20 @@ func applyFilters(query *gorm.DB, filter domain.LotFilter) *gorm.DB {
 	if filter.ThreadSize != "" {
 		query = query.Where("params->>'thread_size' ILIKE ?", "%"+filter.ThreadSize+"%")
 	}
+	if filter.ThreadPitch != "" {
+		query = query.Where("params->>'thread_pitch' ILIKE ?", "%"+filter.ThreadPitch+"%")
+	}
+	if filter.FastenerLength != "" {
+		query = query.Where("params->>'fastener_length' ILIKE ?", "%"+filter.FastenerLength+"%")
+	}
 	if filter.SeatType != "" {
 		query = query.Where("params->>'seat_type' ILIKE ?", "%"+filter.SeatType+"%")
+	}
+	if filter.FastenerColor != "" {
+		query = query.Where("params->>'fastener_color' ILIKE ?", "%"+filter.FastenerColor+"%")
+	}
+	if filter.WrenchSize != "" {
+		query = query.Where("params->>'wrench_size' ILIKE ?", "%"+filter.WrenchSize+"%")
 	}
 	if filter.RingInnerDiameter > 0 {
 		query = query.Where("params->>'ring_inner_diameter' = ?", formatNumericParam(filter.RingInnerDiameter))

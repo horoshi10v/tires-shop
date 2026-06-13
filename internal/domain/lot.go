@@ -35,7 +35,11 @@ type LotParams struct {
 	AccessoryCategory string  `json:"accessory_category,omitempty"` // FASTENERS, HUB_RINGS, SPACERS, TIRE_BAGS
 	FastenerType      string  `json:"fastener_type,omitempty"`      // NUT, BOLT
 	ThreadSize        string  `json:"thread_size,omitempty"`
+	ThreadPitch       string  `json:"thread_pitch,omitempty"`
+	FastenerLength    string  `json:"fastener_length,omitempty"`
 	SeatType          string  `json:"seat_type,omitempty"`
+	FastenerColor     string  `json:"fastener_color,omitempty"`
+	WrenchSize        string  `json:"wrench_size,omitempty"`
 	RingInnerDiameter float64 `json:"ring_inner_diameter,omitempty"`
 	RingOuterDiameter float64 `json:"ring_outer_diameter,omitempty"`
 	SpacerType        string  `json:"spacer_type,omitempty"` // ADAPTER, EXTENDER
@@ -106,7 +110,11 @@ type LotFilter struct {
 	AccessoryCategory string
 	FastenerType      string
 	ThreadSize        string
+	ThreadPitch       string
+	FastenerLength    string
 	SeatType          string
+	FastenerColor     string
+	WrenchSize        string
 	RingInnerDiameter float64
 	RingOuterDiameter float64
 	SpacerType        string
